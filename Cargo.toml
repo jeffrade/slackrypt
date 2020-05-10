@@ -1,0 +1,17 @@
+[package]
+name = "slackrypt"
+version = "0.1.0"
+authors = ["jeffrade <jeffrade@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+
+[dependencies]
+log = { version = "0.4", features = ["std", "serde"] }
+simple_logger = "1.6"
+rand = "0.7.3"
+#rsa = "0.2.0" Need RSA cloned locally until a new release is available
+rsa = { path = "../RSA" }
+pem = "0.7"
