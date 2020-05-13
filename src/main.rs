@@ -58,19 +58,8 @@ fn main() {
   let message_input: String = message_arg.to_string();
   let message_bytes = message_input.into_bytes();
   let message: Vec<u8> = message_bytes.to_vec();
-  let cipher_vec = encrypt_message(&message, &public_key);
-  let _cipher_str = String::from_utf8_lossy(&cipher_vec);
-
-  let cipher_vec_openssl = encrypt_message(&message, &public_key_openssl);
-  let _cipher_str_openssl = String::from_utf8_lossy(&cipher_vec_openssl);
-
-  let private_key = get_private_key(&dir).unwrap();
-  let message_str = decrypt_message(&cipher_vec, &private_key);
-  let message_str_openssl = decrypt_message(&cipher_vec_openssl, &private_key);
-
-  assert_eq!(&message_str, &message_str_openssl);
-  info!("decrypted message is {}", &message_str);
-
+  
+  //AES message encryption
   let key: [u8; 16] = generate_random_hex_16();
   debug!("random key is {}", String::from_utf8_lossy(&key).to_string());
   let iv: [u8; 16] = generate_random_hex_16();
@@ -80,6 +69,21 @@ fn main() {
   let cipher = Aes128Cbc::new_var(&key, &iv).unwrap();
   let ciphertext = cipher.encrypt_vec(&message);
   info!("ciphertext is {}", String::from_utf8_lossy(&ciphertext).to_string());
+
+  //RSA key(and iv) encryption
+  let cipher_vec = encrypt_data(&key, &public_key);
+  let _cipher_str = String::from_utf8_lossy(&cipher_vec);
+
+  let cipher_vec_openssl = encrypt_data(&key, &public_key_openssl);
+  let _cipher_str_openssl = String::from_utf8_lossy(&cipher_vec_openssl);
+
+  //RSA key(and iv) decryption
+  let private_key = get_private_key(&dir).unwrap();
+  let message_str = decrypt_message(&cipher_vec, &private_key);
+  let message_str_openssl = decrypt_message(&cipher_vec_openssl, &private_key);
+
+  assert_eq!(&message_str, &message_str_openssl);
+  info!("decrypted key is {}", &message_str);
 }
 
 fn generate_random_hex_16() -> [u8; 16] {
@@ -99,7 +103,7 @@ fn generate_random_hex_16() -> [u8; 16] {
   ret_val
 }
 
-fn encrypt_message(data: &[u8], public_key: &RSAPublicKey) -> Vec<u8> {
+fn encrypt_data(data: &[u8], public_key: &RSAPublicKey) -> Vec<u8> {
   let mut rng = OsRng;
   public_key.encrypt(&mut rng, PaddingScheme::PKCS1v15, &data[..]).expect("failed to encrypt")
 }
