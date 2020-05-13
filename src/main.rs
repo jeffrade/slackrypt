@@ -2,6 +2,8 @@ extern crate log;
 extern crate pem;
 extern crate rand;
 extern crate rsa;
+extern crate aes_soft as aes;
+extern crate block_modes;
 extern crate simple_logger;
 
 use std::convert::From;
@@ -16,6 +18,9 @@ use std::path::Path;
 use std::process::Command;
 use std::vec::Vec;
 
+use aes::Aes128;
+use block_modes::{BlockMode, Cbc};
+use block_modes::block_padding::Pkcs7;
 use log::{debug, info, warn};
 use rand::rngs::OsRng;
 use rsa::{PublicKey, RSAPublicKey, RSAPrivateKey, PaddingScheme};
@@ -30,7 +35,7 @@ fn main() {
   match fs::create_dir(&dir) {
     Ok(_) => true,
     Err(_) => {
-      warn!("Does ~/.slackrypt dir exist? Skipping for now...");
+      warn!("Ignore since ~/.slackrypt dir might already exist.");
       true
     }
   };
@@ -44,13 +49,13 @@ fn main() {
   let public_key_openssl: RSAPublicKey = get_public_key(&dir).unwrap();
   assert_eq!(&public_key, &public_key_openssl);
 
-  let mut message: &str = "Hello World!";
+  let mut message_arg: &str = "Hello World!";
   let args: Vec<String> = env::args().collect();
   if args.len() > 1 {
-    message = &args[1];
+    message_arg = &args[1];
   }
 
-  let message_input: String = message.to_string();
+  let message_input: String = message_arg.to_string();
   let message_bytes = message_input.into_bytes();
   let message: Vec<u8> = message_bytes.to_vec();
   let cipher_vec = encrypt_message(&message, &public_key);
@@ -65,6 +70,33 @@ fn main() {
 
   assert_eq!(&message_str, &message_str_openssl);
   info!("decrypted message is {}", &message_str);
+
+  let key: [u8; 16] = generate_random_hex_16();
+  debug!("random key is {}", String::from_utf8_lossy(&key).to_string());
+  let iv: [u8; 16] = generate_random_hex_16();
+  debug!("random iv is {}", String::from_utf8_lossy(&iv).to_string());
+
+  type Aes128Cbc = Cbc<Aes128, Pkcs7>;
+  let cipher = Aes128Cbc::new_var(&key, &iv).unwrap();
+  let ciphertext = cipher.encrypt_vec(&message);
+  info!("ciphertext is {}", String::from_utf8_lossy(&ciphertext).to_string());
+}
+
+fn generate_random_hex_16() -> [u8; 16] {
+  let cmd = Command::new("openssl")
+    .arg("rand")
+    .arg("-hex")
+    .arg("16")
+    .output()
+    .expect("Failed to generate random hex!");
+  debug!("openssl rand status {}", cmd.status);
+  
+  let result: &[u8] = cmd.stdout.as_slice();
+  let mut ret_val = [0; 16];
+  for i in 0..15 {
+    ret_val[i] = result[i];
+  }
+  ret_val
 }
 
 fn encrypt_message(data: &[u8], public_key: &RSAPublicKey) -> Vec<u8> {
