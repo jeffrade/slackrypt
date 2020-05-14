@@ -71,19 +71,25 @@ fn main() {
   info!("ciphertext is {}", String::from_utf8_lossy(&ciphertext).to_string());
 
   //RSA key(and iv) encryption
-  let cipher_vec = encrypt_data(&key, &public_key);
-  let _cipher_str = String::from_utf8_lossy(&cipher_vec);
+  let cipher_vec_key = encrypt_data(&key, &public_key);
+  let _cipher_str_key = String::from_utf8_lossy(&cipher_vec_key);
 
-  let cipher_vec_openssl = encrypt_data(&key, &public_key_openssl);
-  let _cipher_str_openssl = String::from_utf8_lossy(&cipher_vec_openssl);
+  let cipher_vec_key_openssl = encrypt_data(&key, &public_key_openssl);
+  let _cipher_str_key_openssl = String::from_utf8_lossy(&cipher_vec_key_openssl);
 
   //RSA key(and iv) decryption
   let private_key = get_private_key(&dir).unwrap();
-  let message_str = decrypt_message(&cipher_vec, &private_key);
-  let message_str_openssl = decrypt_message(&cipher_vec_openssl, &private_key);
+  let key_vec = decrypt_data(&cipher_vec_key, &private_key);
+  let key_vec_openssl = decrypt_data(&cipher_vec_key_openssl, &private_key);
+  assert_eq!(&key_vec, &key_vec_openssl);
+  info!("decrypted key is {}", String::from_utf8_lossy(&key_vec).to_string());
 
-  assert_eq!(&message_str, &message_str_openssl);
-  info!("decrypted key is {}", &message_str);
+  //AES message decryption
+  let cipher = Aes128Cbc::new_var(&key_vec, &iv).unwrap();
+  let mut buf = ciphertext.to_vec();
+  let decrypted_ciphertext: &[u8] = cipher.decrypt(&mut buf).unwrap();
+  assert_eq!(decrypted_ciphertext, message.as_slice());
+  info!("decrypted message is {}", String::from_utf8_lossy(&message).to_string());
 }
 
 fn generate_random_hex_16() -> [u8; 16] {
@@ -108,9 +114,8 @@ fn encrypt_data(data: &[u8], public_key: &RSAPublicKey) -> Vec<u8> {
   public_key.encrypt(&mut rng, PaddingScheme::PKCS1v15, &data[..]).expect("failed to encrypt")
 }
 
-fn decrypt_message(cipher: &[u8], private_key: &RSAPrivateKey) -> String {
-  let message_vec = private_key.decrypt(PaddingScheme::PKCS1v15, &cipher).expect("failed to decrypt");
-  String::from_utf8_lossy(&message_vec).to_string()
+fn decrypt_data(cipher: &[u8], private_key: &RSAPrivateKey) -> Vec<u8> {
+  private_key.decrypt(PaddingScheme::PKCS1v15, &cipher).expect("failed to decrypt")
 }
 
 fn get_public_key(dir: &str) -> Result<RSAPublicKey> {
