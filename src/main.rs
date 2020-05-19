@@ -14,7 +14,7 @@ use std::env;
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::Result;
+use std::io::{self, Result, Write};
 use std::path::Path;
 use std::process::Command;
 use std::vec::Vec;
@@ -27,7 +27,7 @@ use rand::rngs::OsRng;
 use rsa::{PublicKey, RSAPublicKey, RSAPrivateKey, PaddingScheme};
 
 //PKCS1 vs PKCS8 https://stackoverflow.com/questions/48958304/pkcs1-and-pkcs8-format-for-rsa-private-key
-fn main() {  
+fn main() -> io::Result<()> {
   let dir = String::from(env!("HOME")) + "/.slackrypt";
   init(&dir);
   
@@ -64,7 +64,8 @@ fn main() {
     ciphertext_hex.push_str(&v_i);
   }
   info!("ciphertext_hex is {}", &ciphertext_hex);
-  let ciphertext_decoded: Vec<u8> = hex::decode(ciphertext_hex).expect("hex decoding failed!");
+  //TODO Should I then base64 encode ciphertext_hex?
+  let ciphertext_decoded: Vec<u8> = hex::decode(&ciphertext_hex).expect("hex decoding failed!");
   assert_eq!(ciphertext, ciphertext_decoded);
 
   //RSA key(and iv) encryption
@@ -87,6 +88,28 @@ fn main() {
   let decrypted_ciphertext: &[u8] = cipher.decrypt(&mut buf).unwrap();
   assert_eq!(decrypted_ciphertext, message.as_slice());
   info!("decrypted message is {}", String::from_utf8_lossy(&message).to_string());
+
+  //Use PGP as inspiration for contructing a message: https://tools.ietf.org/html/rfc4880#section-6.2
+  let begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
+  let version_header: String = String::from("Version: Slackrypt 0.1");
+  let end_header: String = String::from("-----END SLACKRYPT MESSAGE-----");
+
+  //A psuedo ASCII Armor format https://tools.ietf.org/html/rfc4880#section-6.2
+  let stdout = io::stdout();
+  let mut handle = stdout.lock();
+  handle.write_all(begin_header.as_bytes())?;
+  handle.write_all(b"\n")?;
+  handle.write_all(version_header.as_bytes())?;
+  handle.write_all(b"\n")?;
+  handle.write_all(b"\n")?;
+  handle.write_all(ciphertext_hex.as_bytes())?;
+  handle.write_all(b"\n")?;
+  //TODO the key and iv? vBSFjNSiVHsuAA==
+  //TODO the radix-64 CRC (Cyclic_redundancy_check)? =njUN
+  //TODO  -> CRC impl in C https://tools.ietf.org/html/rfc4880#section-6.1
+  handle.write_all(end_header.as_bytes())?;
+  handle.write_all(b"\n")?;
+  Ok(())
 }
 
 fn generate_random_hex_16() -> [u8; 16] {
