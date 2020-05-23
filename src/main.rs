@@ -14,7 +14,7 @@ use std::env;
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::{self, Result, Write};
+use std::io::{stdout, Result, Write};
 use std::path::Path;
 use std::process::Command;
 use std::vec::Vec;
@@ -27,7 +27,7 @@ use rand::rngs::OsRng;
 use rsa::{PublicKey, RSAPublicKey, RSAPrivateKey, PaddingScheme};
 
 //PKCS1 vs PKCS8 https://stackoverflow.com/questions/48958304/pkcs1-and-pkcs8-format-for-rsa-private-key
-fn main() -> io::Result<()> {
+fn main() {
   let dir = String::from(env!("HOME")) + "/.slackrypt";
   init(&dir);
   
@@ -47,43 +47,41 @@ fn main() -> io::Result<()> {
   let message: Vec<u8> = message_bytes.to_vec();
   
   //AES message encryption
+  //TODO I need to include IV in the armor message, but probably don't need to encrypt it.
+  //      -> https://security.stackexchange.com/questions/17044/when-using-aes-and-cbc-is-it-necessary-to-keep-the-iv-secret
   let key: [u8; 16] = generate_random_hex_16();
   debug!("random key is {}", String::from_utf8_lossy(&key).to_string());
+  debug!("random key length is {}", &key.len());
   let iv: [u8; 16] = generate_random_hex_16();
   debug!("random iv is {}", String::from_utf8_lossy(&iv).to_string());
+  debug!("random iv length is {}", &iv.len());
 
   type Aes128Cbc = Cbc<Aes128, Pkcs7>;
   let cipher = Aes128Cbc::new_var(&key, &iv).unwrap();
   let ciphertext: Vec<u8> = cipher.encrypt_vec(&message);
 
-  //Ciphertext to hexadecimal
-  let mut ciphertext_hex: String = String::new();
-  for i in 0..ciphertext.len() {
-    let u_8: u8 = ciphertext[i];
-    let v_i: String = format!("{:02X}", u_8);//println!("{} : {:02X}", u_8, u_8);
-    ciphertext_hex.push_str(&v_i);
-  }
+  let ciphertext_hex: String = to_hexadecimal_str(&ciphertext);
   info!("ciphertext_hex is {}", &ciphertext_hex);
-  //TODO Should I then base64 encode ciphertext_hex?
+  //TODO Should I then base64 encode ciphertext_hex? https://stackoverflow.com/a/44532957
+  
   let ciphertext_decoded: Vec<u8> = hex::decode(&ciphertext_hex).expect("hex decoding failed!");
   assert_eq!(ciphertext, ciphertext_decoded);
 
-  //RSA key(and iv) encryption
-  let cipher_vec_key = encrypt_data(&key, &public_key);
-  let _cipher_str_key = String::from_utf8_lossy(&cipher_vec_key);
-
-  let cipher_vec_key_openssl = encrypt_data(&key, &public_key_openssl);
-  let _cipher_str_key_openssl = String::from_utf8_lossy(&cipher_vec_key_openssl);
-
-  //RSA key(and iv) decryption
+  //RSA key and iv encryption
+  let cipher_vec_key: Vec<u8> = encrypt_data(&key, &public_key);
+  debug!("cipher_vec_key length is {}", &cipher_vec_key.len());
+  //sanity check
+  let cipher_vec_key_openssl: Vec<u8> = encrypt_data(&key, &public_key_openssl);
+  
+  //RSA key and iv decryption
   let private_key = get_private_key(&dir).unwrap();
-  let key_vec = decrypt_data(&cipher_vec_key, &private_key);
-  let key_vec_openssl = decrypt_data(&cipher_vec_key_openssl, &private_key);
-  assert_eq!(&key_vec, &key_vec_openssl);
-  info!("decrypted key is {}", String::from_utf8_lossy(&key_vec).to_string());
+  let de_key_vec: Vec<u8> = decrypt_data(&cipher_vec_key, &private_key);
+  let de_key_vec_openssl: Vec<u8> = decrypt_data(&cipher_vec_key_openssl, &private_key);
+  assert_eq!(&de_key_vec, &de_key_vec_openssl);
+  info!("decrypted key is {}", String::from_utf8_lossy(&de_key_vec).to_string());
 
   //AES message decryption
-  let cipher = Aes128Cbc::new_var(&key_vec, &iv).unwrap();
+  let cipher = Aes128Cbc::new_var(&de_key_vec, &iv).unwrap();
   let mut buf: Vec<u8> = ciphertext_decoded.to_vec();
   let decrypted_ciphertext: &[u8] = cipher.decrypt(&mut buf).unwrap();
   assert_eq!(decrypted_ciphertext, message.as_slice());
@@ -92,22 +90,39 @@ fn main() -> io::Result<()> {
   //Use PGP as inspiration for contructing a message: https://tools.ietf.org/html/rfc4880#section-6.2
   let begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
   let version_header: String = String::from("Version: Slackrypt 0.1");
+  let key_hex: String = to_hexadecimal_str(&cipher_vec_key);
+  debug!("key_hex is {}", &key_hex);
   let end_header: String = String::from("-----END SLACKRYPT MESSAGE-----");
 
-  //A psuedo ASCII Armor format https://tools.ietf.org/html/rfc4880#section-6.2
-  let stdout = io::stdout();
+  write_message_to_stdout(&begin_header, &end_header, &version_header, &ciphertext_hex, &key_hex, &iv).unwrap();
+  
+  //TODO Read message format above as input and decode the message from.
+}
+
+//A psuedo ASCII Armor format https://tools.ietf.org/html/rfc4880#section-6.2
+fn write_message_to_stdout(
+    begin_head: &String,
+    end_head: &String,
+    ver_head: &String,
+    cipher: &String,
+    key: &String,
+    iv: &[u8]) -> Result<()> {
+  let stdout = stdout();
   let mut handle = stdout.lock();
-  handle.write_all(begin_header.as_bytes())?;
+  handle.write_all(&begin_head.as_bytes())?;
   handle.write_all(b"\n")?;
-  handle.write_all(version_header.as_bytes())?;
+  handle.write_all(&ver_head.as_bytes())?;
   handle.write_all(b"\n")?;
   handle.write_all(b"\n")?;
-  handle.write_all(ciphertext_hex.as_bytes())?;
+  handle.write_all(&cipher.as_bytes())?;
   handle.write_all(b"\n")?;
-  //TODO the key and iv? vBSFjNSiVHsuAA==
+  handle.write_all(&key.as_bytes())?;
+  handle.write_all(b"\n")?;
+  handle.write_all(&iv)?;
+  handle.write_all(b"\n")?;
   //TODO the radix-64 CRC (Cyclic_redundancy_check)? =njUN
-  //TODO  -> CRC impl in C https://tools.ietf.org/html/rfc4880#section-6.1
-  handle.write_all(end_header.as_bytes())?;
+  //      -> CRC impl in C https://tools.ietf.org/html/rfc4880#section-6.1
+  handle.write_all(end_head.as_bytes())?;
   handle.write_all(b"\n")?;
   Ok(())
 }
@@ -200,8 +215,19 @@ fn chmod_file(file_name: &str, permissions: &str) {
   debug!("chmod cmd returned {}", cmd.status);
 }
 
+fn to_hexadecimal_str(vec: &Vec<u8>) -> String {
+  let mut hex: String = String::new();
+  for i in 0..vec.len() {
+    let u_8: u8 = vec[i];
+    //println!("{}", &u_8);
+    let v_i: String = format!("{:02x}", u_8);
+    hex.push_str(&v_i);
+  }
+  hex
+}
+
 fn init(dir: &str) {
-  simple_logger::init_by_env(); //Defaults to ERROR, set by exporting RUST_LOG
+  simple_logger::init_by_env(); // to set, export RUST_LOG=ERROR|WARN|INFO|DEBUG
 
   match fs::create_dir(dir) {
     Ok(_) => true,
