@@ -2,6 +2,8 @@
 
 _Disclaimer: This project has not been audited and not recommended for production environments._
 
+<img src="https://github.com/jeffrade/slackrypt/blob/master/slackrypt.jpg" alt="logo" width="128" height="128">
+
 ## Prerequisites
  - A [Slack organization](https://slack.com/get-started).
  - Slack [bot keys](https://slack.com/get-started).
