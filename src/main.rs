@@ -47,8 +47,7 @@ fn main() {
   let message: Vec<u8> = message_bytes.to_vec();
   
   //AES message encryption
-  //TODO I need to include IV in the armor message, but probably don't need to encrypt it.
-  //      -> https://security.stackexchange.com/questions/17044/when-using-aes-and-cbc-is-it-necessary-to-keep-the-iv-secret
+  //Notes on IV: https://security.stackexchange.com/questions/17044/when-using-aes-and-cbc-is-it-necessary-to-keep-the-iv-secret
   let key: [u8; 16] = generate_random_hex_16();
   debug!("random key is {}", String::from_utf8_lossy(&key).to_string());
   debug!("random key length is {}", &key.len());
@@ -67,36 +66,71 @@ fn main() {
   let ciphertext_decoded: Vec<u8> = hex::decode(&ciphertext_hex).expect("hex decoding failed!");
   assert_eq!(ciphertext, ciphertext_decoded);
 
-  //RSA key and iv encryption
+  //RSA key encryption
   let cipher_vec_key: Vec<u8> = encrypt_data(&key, &public_key);
   debug!("cipher_vec_key length is {}", &cipher_vec_key.len());
   //sanity check
   let cipher_vec_key_openssl: Vec<u8> = encrypt_data(&key, &public_key_openssl);
   
-  //RSA key and iv decryption
+  //RSA key decryption
   let private_key = get_private_key(&dir).unwrap();
   let de_key_vec: Vec<u8> = decrypt_data(&cipher_vec_key, &private_key);
   let de_key_vec_openssl: Vec<u8> = decrypt_data(&cipher_vec_key_openssl, &private_key);
   assert_eq!(&de_key_vec, &de_key_vec_openssl);
-  info!("decrypted key is {}", String::from_utf8_lossy(&de_key_vec).to_string());
+  debug!("decrypted key is {}", String::from_utf8_lossy(&de_key_vec).to_string());
 
   //AES message decryption
   let cipher = Aes128Cbc::new_var(&de_key_vec, &iv).unwrap();
   let mut buf: Vec<u8> = ciphertext_decoded.to_vec();
   let decrypted_ciphertext: &[u8] = cipher.decrypt(&mut buf).unwrap();
   assert_eq!(decrypted_ciphertext, message.as_slice());
-  info!("decrypted message is {}", String::from_utf8_lossy(&message).to_string());
 
-  //Use PGP as inspiration for contructing a message: https://tools.ietf.org/html/rfc4880#section-6.2
+  //Use OpenPGP Armor as inspiration for formatting: https://tools.ietf.org/html/rfc4880#section-6.2
   let begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
   let version_header: String = String::from("Version: Slackrypt 0.1");
   let key_hex: String = to_hexadecimal_str(&cipher_vec_key);
   debug!("key_hex is {}", &key_hex);
   let end_header: String = String::from("-----END SLACKRYPT MESSAGE-----");
 
+  //Write encrypted message out to a file (and stdout)
+  let file_name = String::from(&dir) + "/message.test";
   write_message_to_stdout(&begin_header, &end_header, &version_header, &ciphertext_hex, &key_hex, &iv).unwrap();
+  write_message_to_file(&file_name, &begin_header, &end_header, &version_header, &ciphertext_hex, &key_hex, &iv);
   
-  //TODO Read message format above as input and decode the message from.
+  //Read encrypted message from a file 
+  let message_from_file: String = parse_message_from_file(&file_name).unwrap();
+  let file_lines: Vec<&str> = message_from_file.split("\n").collect();
+  let version_header_line: &str = file_lines[1];
+  assert_eq!(&version_header, &version_header_line);
+  let blank_line: &str = file_lines[2];
+  assert_eq!("", blank_line);
+  let ciphertext_hex_line: &str = file_lines[3];
+  assert_eq!(ciphertext_hex, ciphertext_hex_line);
+  let key_hex_line: &str = file_lines[4];
+  assert_eq!(key_hex, key_hex_line);
+  let iv_line: &str = file_lines[5];
+  assert_eq!(&String::from_utf8_lossy(&iv), iv_line);
+
+  //RSA key decryption
+  let key_hex_decoded_line: Vec<u8> = hex::decode(&key_hex_line).expect("hex decoding failed!");
+  let de_key_vec_line: Vec<u8> = decrypt_data(&key_hex_decoded_line, &private_key);
+  assert_eq!(de_key_vec, de_key_vec_line);
+  
+  //AES message decryption
+  let cipher_line = Aes128Cbc::new_var(&de_key_vec_line, &iv_line.as_bytes()).unwrap();
+  let ciphertext_decoded_line: Vec<u8> = hex::decode(&ciphertext_hex_line).expect("hex decoding failed!");
+  assert_eq!(ciphertext_decoded, ciphertext_decoded_line);
+  let mut buf_line: Vec<u8> = ciphertext_decoded_line.to_vec();
+  let decrypted_ciphertext_line: &[u8] = cipher_line.decrypt(&mut buf_line).unwrap();
+  assert_eq!(decrypted_ciphertext_line, message.as_slice());
+  info!("decrypted message is {}", String::from_utf8_lossy(&message).to_string());
+}
+
+fn parse_message_from_file(file_name: &str) -> Result<String> {
+  let mut file = File::open(file_name)?;
+  let mut file_content = String::new();
+  file.read_to_string(&mut file_content)?;
+  Ok(file_content)
 }
 
 //A psuedo ASCII Armor format https://tools.ietf.org/html/rfc4880#section-6.2
@@ -125,6 +159,32 @@ fn write_message_to_stdout(
   handle.write_all(end_head.as_bytes())?;
   handle.write_all(b"\n")?;
   Ok(())
+}
+
+fn write_message_to_file(
+    file_name: &str,
+    begin_head: &String,
+    end_head: &String,
+    ver_head: &String,
+    cipher: &String,
+    key: &String,
+    iv: &[u8]) {
+  let mut data: String = String::new();
+  data.push_str(begin_head);
+  data.push_str("\n");
+  data.push_str(ver_head);
+  data.push_str("\n");
+  data.push_str("\n");
+  data.push_str(cipher);
+  data.push_str("\n");
+  data.push_str(&key);
+  data.push_str("\n");
+  data.push_str(&String::from_utf8_lossy(iv));
+  data.push_str("\n");
+  //TODO the radix-64 CRC (Cyclic_redundancy_check)? =njUN
+  //      -> CRC impl in C https://tools.ietf.org/html/rfc4880#section-6.1
+  data.push_str(end_head);
+  fs::write(file_name, data).expect("Unable to write encrypted message!");
 }
 
 fn generate_random_hex_16() -> [u8; 16] {
