@@ -121,7 +121,7 @@ fn main() {
 
     //Read encrypted message from a file
     let message_from_file: String = parse_message_from_file(&file_name).unwrap();
-    let file_lines: Vec<&str> = message_from_file.split("\n").collect();
+    let file_lines: Vec<&str> = message_from_file.split('\n').collect();
     let version_header_line: &str = file_lines[1];
     assert_eq!(&version_header, &version_header_line);
     let blank_line: &str = file_lines[2];
@@ -161,11 +161,11 @@ fn parse_message_from_file(file_name: &str) -> Result<String> {
 
 //A psuedo ASCII Armor format https://tools.ietf.org/html/rfc4880#section-6.2
 fn write_message_to_stdout(
-    begin_head: &String,
-    end_head: &String,
-    ver_head: &String,
-    cipher: &String,
-    key: &String,
+    begin_head: &str,
+    end_head: &str,
+    ver_head: &str,
+    cipher: &str,
+    key: &str,
     iv: &[u8],
 ) -> Result<()> {
     let stdout = stdout();
@@ -190,11 +190,11 @@ fn write_message_to_stdout(
 
 fn write_message_to_file(
     file_name: &str,
-    begin_head: &String,
-    end_head: &String,
-    ver_head: &String,
-    cipher: &String,
-    key: &String,
+    begin_head: &str,
+    end_head: &str,
+    ver_head: &str,
+    cipher: &str,
+    key: &str,
     iv: &[u8],
 ) {
     let mut data: String = String::new();
@@ -226,9 +226,7 @@ fn generate_random_hex_16() -> [u8; 16] {
 
     let result: &[u8] = cmd.stdout.as_slice();
     let mut ret_val = [0; 16];
-    for i in 0..15 {
-        ret_val[i] = result[i];
-    }
+    ret_val[..15].clone_from_slice(&result[..15]);
     ret_val
 }
 
@@ -313,11 +311,9 @@ fn chmod_file(file_name: &str, permissions: &str) {
     debug!("chmod cmd returned {}", cmd.status);
 }
 
-fn to_hexadecimal_str(vec: &Vec<u8>) -> String {
+fn to_hexadecimal_str(vec: &[u8]) -> String {
     let mut hex: String = String::new();
-    for i in 0..vec.len() {
-        let u_8: u8 = vec[i];
-        //println!("{}", &u_8);
+    for u_8 in vec {
         let v_i: String = format!("{:02x}", u_8);
         hex.push_str(&v_i);
     }
