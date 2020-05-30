@@ -36,17 +36,9 @@ fn main() {
     let public_key_openssl: RSAPublicKey = get_public_key(&dir).unwrap();
     assert_eq!(&public_key, &public_key_openssl);
 
-    let mut message_arg: &str = "Hello World!";
-    let args: Vec<String> = env::args().collect();
-    if args.len() > 1 {
-        message_arg = &args[1];
-    }
+    let plaintext: Vec<u8> = get_user_input_message();
 
-    let message_input: String = message_arg.to_string();
-    let message_bytes = message_input.into_bytes();
-    let message: Vec<u8> = message_bytes.to_vec();
-
-    //AES message encryption
+    //AES plaintext encryption
     //Notes on IV: https://security.stackexchange.com/questions/17044/when-using-aes-and-cbc-is-it-necessary-to-keep-the-iv-secret
     let key: [u8; 16] = generate_random_hex_16();
     debug!(
@@ -60,13 +52,14 @@ fn main() {
 
     type Aes128Cbc = Cbc<Aes128, Pkcs7>;
     let cipher = Aes128Cbc::new_var(&key, &iv).unwrap();
-    let ciphertext: Vec<u8> = cipher.encrypt_vec(&message);
+    let ciphertext: Vec<u8> = cipher.encrypt_vec(&plaintext);
 
     let ciphertext_hex: String = to_hexadecimal_str(&ciphertext);
     info!("ciphertext_hex is {}", &ciphertext_hex);
     //TODO Should I then base64 encode ciphertext_hex? https://stackoverflow.com/a/44532957
+    //     Or more easily, just go from Vec<u8> to base64? https://stackoverflow.com/a/58051911
 
-    let ciphertext_decoded: Vec<u8> = hex::decode(&ciphertext_hex).expect("hex decoding failed!");
+    let ciphertext_decoded: Vec<u8> = from_hexadecimal_str(&ciphertext_hex);
     assert_eq!(ciphertext, ciphertext_decoded);
 
     //RSA key encryption
@@ -85,11 +78,11 @@ fn main() {
         String::from_utf8_lossy(&de_key_vec).to_string()
     );
 
-    //AES message decryption
+    //AES ciphertext decryption
     let cipher = Aes128Cbc::new_var(&de_key_vec, &iv).unwrap();
     let mut buf: Vec<u8> = ciphertext_decoded.to_vec();
     let decrypted_ciphertext: &[u8] = cipher.decrypt(&mut buf).unwrap();
-    assert_eq!(decrypted_ciphertext, message.as_slice());
+    assert_eq!(decrypted_ciphertext, plaintext.as_slice());
 
     //Use OpenPGP Armor as inspiration for formatting: https://tools.ietf.org/html/rfc4880#section-6.2
     let begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
@@ -134,21 +127,20 @@ fn main() {
     assert_eq!(&String::from_utf8_lossy(&iv), iv_line);
 
     //RSA key decryption
-    let key_hex_decoded_line: Vec<u8> = hex::decode(&key_hex_line).expect("hex decoding failed!");
+    let key_hex_decoded_line: Vec<u8> = from_hexadecimal_str(&key_hex_line);
     let de_key_vec_line: Vec<u8> = decrypt_data(&key_hex_decoded_line, &private_key);
     assert_eq!(de_key_vec, de_key_vec_line);
 
-    //AES message decryption
+    //AES ciphertext decryption
     let cipher_line = Aes128Cbc::new_var(&de_key_vec_line, &iv_line.as_bytes()).unwrap();
-    let ciphertext_decoded_line: Vec<u8> =
-        hex::decode(&ciphertext_hex_line).expect("hex decoding failed!");
+    let ciphertext_decoded_line: Vec<u8> = from_hexadecimal_str(&ciphertext_hex_line);
     assert_eq!(ciphertext_decoded, ciphertext_decoded_line);
     let mut buf_line: Vec<u8> = ciphertext_decoded_line.to_vec();
     let decrypted_ciphertext_line: &[u8] = cipher_line.decrypt(&mut buf_line).unwrap();
-    assert_eq!(decrypted_ciphertext_line, message.as_slice());
+    assert_eq!(decrypted_ciphertext_line, plaintext.as_slice());
     info!(
-        "decrypted message is {}",
-        String::from_utf8_lossy(&message).to_string()
+        "decrypted ciphertext is {}",
+        String::from_utf8_lossy(decrypted_ciphertext_line).to_string()
     );
 }
 
@@ -188,6 +180,7 @@ fn write_message_to_stdout(
     Ok(())
 }
 
+//A psuedo ASCII Armor format https://tools.ietf.org/html/rfc4880#section-6.2
 fn write_message_to_file(
     file_name: &str,
     begin_head: &str,
@@ -318,6 +311,21 @@ fn to_hexadecimal_str(vec: &[u8]) -> String {
         hex.push_str(&v_i);
     }
     hex
+}
+
+fn from_hexadecimal_str(s: &str) -> Vec<u8> {
+    hex::decode(s).expect("hex decoding failed!")
+}
+
+fn get_user_input_message() -> Vec<u8> {
+    let mut plaintext_arg: &str = "Hello World!";
+    let args: Vec<String> = env::args().collect();
+    if args.len() > 1 {
+        plaintext_arg = &args[1];
+    }
+    let plaintext_input: String = plaintext_arg.to_string();
+    let plaintext_bytes = plaintext_input.into_bytes();
+    plaintext_bytes.to_vec()
 }
 
 fn init(dir: &str) {
