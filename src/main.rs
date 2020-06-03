@@ -9,12 +9,9 @@ extern crate simple_logger;
 
 use std::convert::From;
 use std::convert::Into;
-use std::convert::TryFrom;
 use std::env;
 use std::fs;
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::{stdout, Result, Write};
+use std::io::Result;
 use std::path::Path;
 use std::process::Command;
 use std::vec::Vec;
@@ -26,14 +23,16 @@ use log::{debug, info, warn};
 use rand::rngs::OsRng;
 use rsa::{PaddingScheme, PublicKey, RSAPrivateKey, RSAPublicKey};
 
+mod io;
+
 //PKCS1 vs PKCS8 https://stackoverflow.com/questions/48958304/pkcs1-and-pkcs8-format-for-rsa-private-key
 fn main() {
     let dir = String::from(env!("HOME")) + "/.slackrypt";
     init(&dir);
 
-    let private_key = get_private_key(&dir).unwrap();
+    let private_key = io::get_private_key(&dir).unwrap();
     let public_key: RSAPublicKey = private_key.into();
-    let public_key_openssl: RSAPublicKey = get_public_key(&dir).unwrap();
+    let public_key_openssl: RSAPublicKey = io::get_public_key(&dir).unwrap();
     assert_eq!(&public_key, &public_key_openssl);
 
     let plaintext: Vec<u8> = get_user_input_message();
@@ -69,7 +68,7 @@ fn main() {
     let cipher_vec_key_openssl: Vec<u8> = encrypt_data(&key, &public_key_openssl);
 
     //RSA key decryption
-    let private_key = get_private_key(&dir).unwrap();
+    let private_key = io::get_private_key(&dir).unwrap();
     let de_key_vec: Vec<u8> = decrypt_data(&cipher_vec_key, &private_key);
     let de_key_vec_openssl: Vec<u8> = decrypt_data(&cipher_vec_key_openssl, &private_key);
     assert_eq!(&de_key_vec, &de_key_vec_openssl);
@@ -93,7 +92,7 @@ fn main() {
 
     //Write encrypted message out to a file (and stdout)
     let file_name = String::from(&dir) + "/message.test";
-    write_message_to_stdout(
+    io::write_message_to_stdout(
         &begin_header,
         &end_header,
         &version_header,
@@ -102,7 +101,7 @@ fn main() {
         &iv,
     )
     .unwrap();
-    write_message_to_file(
+    io::write_message_to_file(
         &file_name,
         &begin_header,
         &end_header,
@@ -113,7 +112,7 @@ fn main() {
     );
 
     //Read encrypted message from a file
-    let message_from_file: String = parse_message_from_file(&file_name).unwrap();
+    let message_from_file: String = io::parse_message_from_file(&file_name).unwrap();
     let file_lines: Vec<&str> = message_from_file.split('\n').collect();
     let version_header_line: &str = file_lines[1];
     assert_eq!(&version_header, &version_header_line);
@@ -144,70 +143,6 @@ fn main() {
     );
 }
 
-fn parse_message_from_file(file_name: &str) -> Result<String> {
-    let mut file = File::open(file_name)?;
-    let mut file_content = String::new();
-    file.read_to_string(&mut file_content)?;
-    Ok(file_content)
-}
-
-//A psuedo ASCII Armor format https://tools.ietf.org/html/rfc4880#section-6.2
-fn write_message_to_stdout(
-    begin_head: &str,
-    end_head: &str,
-    ver_head: &str,
-    cipher: &str,
-    key: &str,
-    iv: &[u8],
-) -> Result<()> {
-    let stdout = stdout();
-    let mut handle = stdout.lock();
-    handle.write_all(&begin_head.as_bytes())?;
-    handle.write_all(b"\n")?;
-    handle.write_all(&ver_head.as_bytes())?;
-    handle.write_all(b"\n")?;
-    handle.write_all(b"\n")?;
-    handle.write_all(&cipher.as_bytes())?;
-    handle.write_all(b"\n")?;
-    handle.write_all(&key.as_bytes())?;
-    handle.write_all(b"\n")?;
-    handle.write_all(&iv)?;
-    handle.write_all(b"\n")?;
-    //TODO the radix-64 CRC (Cyclic_redundancy_check)? =njUN
-    //      -> CRC impl in C https://tools.ietf.org/html/rfc4880#section-6.1
-    handle.write_all(end_head.as_bytes())?;
-    handle.write_all(b"\n")?;
-    Ok(())
-}
-
-//A psuedo ASCII Armor format https://tools.ietf.org/html/rfc4880#section-6.2
-fn write_message_to_file(
-    file_name: &str,
-    begin_head: &str,
-    end_head: &str,
-    ver_head: &str,
-    cipher: &str,
-    key: &str,
-    iv: &[u8],
-) {
-    let mut data: String = String::new();
-    data.push_str(begin_head);
-    data.push_str("\n");
-    data.push_str(ver_head);
-    data.push_str("\n");
-    data.push_str("\n");
-    data.push_str(cipher);
-    data.push_str("\n");
-    data.push_str(&key);
-    data.push_str("\n");
-    data.push_str(&String::from_utf8_lossy(iv));
-    data.push_str("\n");
-    //TODO the radix-64 CRC (Cyclic_redundancy_check)? =njUN
-    //      -> CRC impl in C https://tools.ietf.org/html/rfc4880#section-6.1
-    data.push_str(end_head);
-    fs::write(file_name, data).expect("Unable to write encrypted message!");
-}
-
 fn generate_random_hex_16() -> [u8; 16] {
     let cmd = Command::new("openssl")
         .arg("rand")
@@ -234,26 +169,6 @@ fn decrypt_data(cipher: &[u8], private_key: &RSAPrivateKey) -> Vec<u8> {
     private_key
         .decrypt(PaddingScheme::PKCS1v15, &cipher)
         .expect("failed to decrypt")
-}
-
-fn get_public_key(dir: &str) -> Result<RSAPublicKey> {
-    let file_name = String::from(dir) + "/key.pem.pub";
-    let mut file = File::open(file_name)?;
-    let mut file_content = String::new();
-    file.read_to_string(&mut file_content)?;
-    let pem_encoded = pem::parse(file_content).expect("failed to parse pem file");
-    let public_key = RSAPublicKey::try_from(pem_encoded).expect("failed to parse key");
-    Ok(public_key)
-}
-
-fn get_private_key(dir: &str) -> Result<RSAPrivateKey> {
-    let file_name = String::from(dir) + "/key.pem";
-    let mut file = File::open(file_name)?;
-    let mut file_content = String::new();
-    file.read_to_string(&mut file_content)?;
-    let pem_encoded = pem::parse(file_content).expect("failed to parse pem file");
-    let private_key = RSAPrivateKey::try_from(pem_encoded).expect("failed to parse key");
-    Ok(private_key)
 }
 
 // openssl rsa -in test_key.pem -outform PEM -pubout -out test_key.pem.pub
