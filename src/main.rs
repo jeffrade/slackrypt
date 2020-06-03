@@ -1,28 +1,14 @@
-extern crate aes_soft as aes;
-extern crate block_modes;
-extern crate hex;
-extern crate log;
-extern crate pem;
-extern crate rand;
-extern crate rsa;
-extern crate simple_logger;
-
 use std::convert::From;
 use std::convert::Into;
 use std::env;
 use std::fs;
-use std::io::Result;
 use std::path::Path;
-use std::process::Command;
 use std::vec::Vec;
 
-use aes::Aes128;
-use block_modes::block_padding::Pkcs7;
-use block_modes::{BlockMode, Cbc};
 use log::{debug, info, warn};
-use rand::rngs::OsRng;
-use rsa::{PaddingScheme, PublicKey, RSAPrivateKey, RSAPublicKey};
+use rsa::RSAPublicKey;
 
+mod crypto;
 mod io;
 
 //PKCS1 vs PKCS8 https://stackoverflow.com/questions/48958304/pkcs1-and-pkcs8-format-for-rsa-private-key
@@ -37,22 +23,19 @@ fn main() {
 
     let plaintext: Vec<u8> = get_user_input_message();
 
-    //AES plaintext encryption
+    //plaintext encryption
     //Notes on IV: https://security.stackexchange.com/questions/17044/when-using-aes-and-cbc-is-it-necessary-to-keep-the-iv-secret
-    let key: [u8; 16] = generate_random_hex_16();
+    let key: [u8; 16] = crypto::generate_random_hex_16();
     debug!(
         "random key is {}",
         String::from_utf8_lossy(&key).to_string()
     );
     debug!("random key length is {}", &key.len());
-    let iv: [u8; 16] = generate_random_hex_16();
+    let iv: [u8; 16] = crypto::generate_random_hex_16();
     debug!("random iv is {}", String::from_utf8_lossy(&iv).to_string());
     debug!("random iv length is {}", &iv.len());
 
-    type Aes128Cbc = Cbc<Aes128, Pkcs7>;
-    let cipher = Aes128Cbc::new_var(&key, &iv).unwrap();
-    let ciphertext: Vec<u8> = cipher.encrypt_vec(&plaintext);
-
+    let ciphertext: Vec<u8> = crypto::encrypt_data_sym(&key, &iv, &plaintext);
     let ciphertext_hex: String = to_hexadecimal_str(&ciphertext);
     info!("ciphertext_hex is {}", &ciphertext_hex);
     //TODO Should I then base64 encode ciphertext_hex? https://stackoverflow.com/a/44532957
@@ -61,27 +44,27 @@ fn main() {
     let ciphertext_decoded: Vec<u8> = from_hexadecimal_str(&ciphertext_hex);
     assert_eq!(ciphertext, ciphertext_decoded);
 
-    //RSA key encryption
-    let cipher_vec_key: Vec<u8> = encrypt_data(&key, &public_key);
+    //key encryption
+    let cipher_vec_key: Vec<u8> = crypto::encrypt_data_asym(&key, &public_key);
     debug!("cipher_vec_key length is {}", &cipher_vec_key.len());
     //sanity check
-    let cipher_vec_key_openssl: Vec<u8> = encrypt_data(&key, &public_key_openssl);
+    let cipher_vec_key_openssl: Vec<u8> = crypto::encrypt_data_asym(&key, &public_key_openssl);
 
-    //RSA key decryption
+    //key decryption
     let private_key = io::get_private_key(&dir).unwrap();
-    let de_key_vec: Vec<u8> = decrypt_data(&cipher_vec_key, &private_key);
-    let de_key_vec_openssl: Vec<u8> = decrypt_data(&cipher_vec_key_openssl, &private_key);
+    let de_key_vec: Vec<u8> = crypto::decrypt_data_asym(&cipher_vec_key, &private_key);
+    let de_key_vec_openssl: Vec<u8> =
+        crypto::decrypt_data_asym(&cipher_vec_key_openssl, &private_key);
     assert_eq!(&de_key_vec, &de_key_vec_openssl);
     debug!(
         "decrypted key is {}",
         String::from_utf8_lossy(&de_key_vec).to_string()
     );
 
-    //AES ciphertext decryption
-    let cipher = Aes128Cbc::new_var(&de_key_vec, &iv).unwrap();
-    let mut buf: Vec<u8> = ciphertext_decoded.to_vec();
-    let decrypted_ciphertext: &[u8] = cipher.decrypt(&mut buf).unwrap();
-    assert_eq!(decrypted_ciphertext, plaintext.as_slice());
+    //ciphertext decryption
+    let decrypted_ciphertext: Vec<u8> =
+        crypto::decrypt_sym(&de_key_vec, &iv.to_vec(), &ciphertext_decoded);
+    assert_eq!(decrypted_ciphertext.as_slice(), plaintext.as_slice());
 
     //Use OpenPGP Armor as inspiration for formatting: https://tools.ietf.org/html/rfc4880#section-6.2
     let begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
@@ -125,98 +108,24 @@ fn main() {
     let iv_line: &str = file_lines[5];
     assert_eq!(&String::from_utf8_lossy(&iv), iv_line);
 
-    //RSA key decryption
+    //key decryption
     let key_hex_decoded_line: Vec<u8> = from_hexadecimal_str(&key_hex_line);
-    let de_key_vec_line: Vec<u8> = decrypt_data(&key_hex_decoded_line, &private_key);
+    let de_key_vec_line: Vec<u8> = crypto::decrypt_data_asym(&key_hex_decoded_line, &private_key);
     assert_eq!(de_key_vec, de_key_vec_line);
 
-    //AES ciphertext decryption
-    let cipher_line = Aes128Cbc::new_var(&de_key_vec_line, &iv_line.as_bytes()).unwrap();
+    //ciphertext decryption
     let ciphertext_decoded_line: Vec<u8> = from_hexadecimal_str(&ciphertext_hex_line);
     assert_eq!(ciphertext_decoded, ciphertext_decoded_line);
-    let mut buf_line: Vec<u8> = ciphertext_decoded_line.to_vec();
-    let decrypted_ciphertext_line: &[u8] = cipher_line.decrypt(&mut buf_line).unwrap();
-    assert_eq!(decrypted_ciphertext_line, plaintext.as_slice());
+    let decrypted_ciphertext_line: Vec<u8> = crypto::decrypt_sym(
+        &de_key_vec_line,
+        &iv_line.as_bytes().to_vec(),
+        &ciphertext_decoded_line,
+    );
+    assert_eq!(decrypted_ciphertext_line.as_slice(), plaintext.as_slice());
     info!(
         "decrypted ciphertext is {}",
-        String::from_utf8_lossy(decrypted_ciphertext_line).to_string()
+        String::from_utf8_lossy(decrypted_ciphertext_line.as_slice()).to_string()
     );
-}
-
-fn generate_random_hex_16() -> [u8; 16] {
-    let cmd = Command::new("openssl")
-        .arg("rand")
-        .arg("-hex")
-        .arg("16")
-        .output()
-        .expect("Failed to generate random hex!");
-    debug!("openssl rand status {}", cmd.status);
-
-    let result: &[u8] = cmd.stdout.as_slice();
-    let mut ret_val = [0; 16];
-    ret_val[..15].clone_from_slice(&result[..15]);
-    ret_val
-}
-
-fn encrypt_data(data: &[u8], public_key: &RSAPublicKey) -> Vec<u8> {
-    let mut rng = OsRng;
-    public_key
-        .encrypt(&mut rng, PaddingScheme::PKCS1v15, &data[..])
-        .expect("failed to encrypt")
-}
-
-fn decrypt_data(cipher: &[u8], private_key: &RSAPrivateKey) -> Vec<u8> {
-    private_key
-        .decrypt(PaddingScheme::PKCS1v15, &cipher)
-        .expect("failed to decrypt")
-}
-
-// openssl rsa -in test_key.pem -outform PEM -pubout -out test_key.pem.pub
-fn openssl_pub_key_out(file_name: &str) {
-    let mut pub_key_file = String::from(file_name);
-    pub_key_file.push_str(".pub");
-    let cmd = Command::new("openssl")
-        .arg("rsa")
-        .arg("-in")
-        .arg(file_name)
-        .arg("-outform")
-        .arg("PEM")
-        .arg("-pubout")
-        .arg("-out")
-        .arg(&pub_key_file)
-        .output()
-        .expect("Failed to generate keys!");
-    debug!("openssl rsa status {}", cmd.status);
-    debug!(
-        "openssl rsa stdout {}",
-        String::from_utf8_lossy(&cmd.stdout)
-    );
-    debug!(
-        "openssl rsa stderr: {}",
-        String::from_utf8_lossy(&cmd.stderr)
-    );
-    chmod_file(&pub_key_file, "0644")
-}
-
-// openssl genrsa -out test_key.pem 1024
-fn openssl_generate(file_name: &str, bits: i32) {
-    let cmd = Command::new("openssl")
-        .arg("genrsa")
-        .arg("-out")
-        .arg(file_name)
-        .arg(format!("{}", bits))
-        .output()
-        .expect("Failed to generate keys!");
-    debug!("openssl genrsa returned {}", cmd.status);
-}
-
-fn chmod_file(file_name: &str, permissions: &str) {
-    let cmd = Command::new("chmod")
-        .arg(permissions)
-        .arg(file_name)
-        .output()
-        .expect("Failed to chmod file!");
-    debug!("chmod cmd returned {}", cmd.status);
 }
 
 fn to_hexadecimal_str(vec: &[u8]) -> String {
@@ -256,21 +165,10 @@ fn init(dir: &str) {
 
     let key_file = String::from(dir) + "/key.pem";
     if !keys_exist(&key_file) {
-        create_keys(&key_file).unwrap();
+        let bits_str = String::from(env!("SCRYPT_KEY_SIZE")); //Set this to min of 2048
+        let bits: i32 = bits_str.parse::<i32>().unwrap();
+        crypto::create_keys_asym(bits, &key_file);
     }
-}
-
-fn create_keys(key_file: &str) -> Result<()> {
-    let bits_str = String::from(env!("SCRYPT_KEY_SIZE")); //Set this to min of 2048
-    let bits: i32 = bits_str.parse::<i32>().unwrap();
-    info!("Creating {} bit keys, this may take a while...", bits);
-
-    // Using openssl since RustCrypto/RSA cannot export keys in PEM.
-    // See issue https://github.com/RustCrypto/RSA/issues/31
-    openssl_generate(key_file, bits);
-    chmod_file(key_file, "0400");
-    openssl_pub_key_out(key_file);
-    Ok(())
 }
 
 fn keys_exist(key_file: &str) -> bool {
