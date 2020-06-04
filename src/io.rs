@@ -1,5 +1,3 @@
-extern crate pem;
-
 use std::convert::TryFrom;
 use std::fs;
 use std::fs::File;

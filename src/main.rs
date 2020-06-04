@@ -2,7 +2,6 @@ use std::convert::From;
 use std::convert::Into;
 use std::env;
 use std::fs;
-use std::path::Path;
 use std::vec::Vec;
 
 use log::{debug, info, warn};
@@ -10,6 +9,7 @@ use rsa::RSAPublicKey;
 
 mod crypto;
 mod io;
+mod util;
 
 //PKCS1 vs PKCS8 https://stackoverflow.com/questions/48958304/pkcs1-and-pkcs8-format-for-rsa-private-key
 fn main() {
@@ -21,7 +21,7 @@ fn main() {
     let public_key_openssl: RSAPublicKey = io::get_public_key(&dir).unwrap();
     assert_eq!(&public_key, &public_key_openssl);
 
-    let plaintext: Vec<u8> = get_user_input_message();
+    let plaintext: Vec<u8> = util::get_user_input_message();
 
     //plaintext encryption
     //Notes on IV: https://security.stackexchange.com/questions/17044/when-using-aes-and-cbc-is-it-necessary-to-keep-the-iv-secret
@@ -36,12 +36,12 @@ fn main() {
     debug!("random iv length is {}", &iv.len());
 
     let ciphertext: Vec<u8> = crypto::encrypt_data_sym(&key, &iv, &plaintext);
-    let ciphertext_hex: String = to_hexadecimal_str(&ciphertext);
+    let ciphertext_hex: String = util::to_hexadecimal_str(&ciphertext);
     info!("ciphertext_hex is {}", &ciphertext_hex);
     //TODO Should I then base64 encode ciphertext_hex? https://stackoverflow.com/a/44532957
     //     Or more easily, just go from Vec<u8> to base64? https://stackoverflow.com/a/58051911
 
-    let ciphertext_decoded: Vec<u8> = from_hexadecimal_str(&ciphertext_hex);
+    let ciphertext_decoded: Vec<u8> = util::from_hexadecimal_str(&ciphertext_hex);
     assert_eq!(ciphertext, ciphertext_decoded);
 
     //key encryption
@@ -69,7 +69,7 @@ fn main() {
     //Use OpenPGP Armor as inspiration for formatting: https://tools.ietf.org/html/rfc4880#section-6.2
     let begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
     let version_header: String = String::from("Version: Slackrypt 0.1");
-    let key_hex: String = to_hexadecimal_str(&cipher_vec_key);
+    let key_hex: String = util::to_hexadecimal_str(&cipher_vec_key);
     debug!("key_hex is {}", &key_hex);
     let end_header: String = String::from("-----END SLACKRYPT MESSAGE-----");
 
@@ -109,12 +109,12 @@ fn main() {
     assert_eq!(&String::from_utf8_lossy(&iv), iv_line);
 
     //key decryption
-    let key_hex_decoded_line: Vec<u8> = from_hexadecimal_str(&key_hex_line);
+    let key_hex_decoded_line: Vec<u8> = util::from_hexadecimal_str(&key_hex_line);
     let de_key_vec_line: Vec<u8> = crypto::decrypt_data_asym(&key_hex_decoded_line, &private_key);
     assert_eq!(de_key_vec, de_key_vec_line);
 
     //ciphertext decryption
-    let ciphertext_decoded_line: Vec<u8> = from_hexadecimal_str(&ciphertext_hex_line);
+    let ciphertext_decoded_line: Vec<u8> = util::from_hexadecimal_str(&ciphertext_hex_line);
     assert_eq!(ciphertext_decoded, ciphertext_decoded_line);
     let decrypted_ciphertext_line: Vec<u8> = crypto::decrypt_sym(
         &de_key_vec_line,
@@ -126,30 +126,6 @@ fn main() {
         "decrypted ciphertext is {}",
         String::from_utf8_lossy(decrypted_ciphertext_line.as_slice()).to_string()
     );
-}
-
-fn to_hexadecimal_str(vec: &[u8]) -> String {
-    let mut hex: String = String::new();
-    for u_8 in vec {
-        let v_i: String = format!("{:02x}", u_8);
-        hex.push_str(&v_i);
-    }
-    hex
-}
-
-fn from_hexadecimal_str(s: &str) -> Vec<u8> {
-    hex::decode(s).expect("hex decoding failed!")
-}
-
-fn get_user_input_message() -> Vec<u8> {
-    let mut plaintext_arg: &str = "Hello World!";
-    let args: Vec<String> = env::args().collect();
-    if args.len() > 1 {
-        plaintext_arg = &args[1];
-    }
-    let plaintext_input: String = plaintext_arg.to_string();
-    let plaintext_bytes = plaintext_input.into_bytes();
-    plaintext_bytes.to_vec()
 }
 
 fn init(dir: &str) {
@@ -164,13 +140,9 @@ fn init(dir: &str) {
     };
 
     let key_file = String::from(dir) + "/key.pem";
-    if !keys_exist(&key_file) {
+    if !util::keys_exist(&key_file) {
         let bits_str = String::from(env!("SCRYPT_KEY_SIZE")); //Set this to min of 2048
         let bits: i32 = bits_str.parse::<i32>().unwrap();
         crypto::create_keys_asym(bits, &key_file);
     }
-}
-
-fn keys_exist(key_file: &str) -> bool {
-    Path::new(key_file).exists()
 }
