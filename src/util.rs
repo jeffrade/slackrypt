@@ -29,3 +29,20 @@ pub fn get_user_input_message() -> Vec<u8> {
 pub fn keys_exist(key_file: &str) -> bool {
     Path::new(key_file).exists()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_hexadecimal_str() {
+        let actual_result = from_hexadecimal_str("ff2a000102030405");
+        assert_eq!(actual_result, vec![255, 42, 0, 1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn test_to_hexadecimal_str() {
+        let actual_result = to_hexadecimal_str(&vec![5, 4, 3, 2, 1, 0, 42, 255]);
+        assert_eq!(actual_result, "0504030201002aff");
+    }
+}
