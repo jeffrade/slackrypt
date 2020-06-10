@@ -7,8 +7,8 @@ _Disclaimer: This project has not been audited and not recommended for productio
 ## Prerequisites
  - A [Slack organization](https://slack.com/get-started).
  - Slack [bot keys](https://slack.com/get-started).
- - You must build from source, so [rustup](https://rustup.rs/). 
- - `git clone` https://github.com/RustCrypto/RSA into same parent dir as this project.
+ - You must build from source, so [rustup](https://rustup.rs/).
+ - Have `openssl` installed (verify with `command -v openssl`).
 
 ## Build
 ```
@@ -37,8 +37,9 @@ $ export RUST_LOG=WARN
 ```
 
 ## Information
- - Uses `openssl` for key generation
+ - Uses `openssl` for key generation.
  - Uses https://github.com/RustCrypto/RSA for parsing/loading keys, encrypting and decrypting plaintext.
+ - Uses [aes-soft](https://github.com/RustCrypto/block-ciphers/#supported-algorithms) for symmetric encryption.
 
 ## Backlog
 #### Slack
@@ -52,3 +53,7 @@ $ export RUST_LOG=WARN
 #### AES
  - https://github.com/RustCrypto/block-ciphers#usage
  - https://docs.rs/aes-soft/0.3.3/aes_soft/ 
+
+#### SERVER
+ - https://github.com/actix/examples/tree/master/basics
+ - https://github.com/actix/examples/blob/master/json/src/main.rs

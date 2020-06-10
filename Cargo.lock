@@ -352,6 +352,7 @@ checksum = "7fe5bd57d1d7414c6b5ed48563a2c855d995ff777729dcd91c369ec7fea395ae"
 [[package]]
 name = "rsa"
 version = "0.2.0"
+source = "git+https://github.com/RustCrypto/RSA?rev=94ce39d9b7f10eb8da9fa197646663c90b96176c#94ce39d9b7f10eb8da9fa197646663c90b96176c"
 dependencies = [
  "byteorder",
  "lazy_static",
