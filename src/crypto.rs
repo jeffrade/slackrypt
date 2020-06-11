@@ -45,7 +45,7 @@ pub fn generate_random_hex_16() -> [u8; 16] {
 
     let result: &[u8] = cmd.stdout.as_slice();
     let mut ret_val = [0; 16];
-    ret_val[..15].clone_from_slice(&result[..15]);
+    ret_val[..16].clone_from_slice(&result[..16]);
     ret_val
 }
 
@@ -76,7 +76,7 @@ pub fn openssl_pub_key_out(file_name: &str) {
     chmod_file(&pub_key_file, "0644")
 }
 
-// openssl genrsa -out test_key.pem 1024
+// openssl genrsa -out test_key.pem 2048
 pub fn openssl_generate(file_name: &str, bits: i32) {
     let cmd = Command::new("openssl")
         .arg("genrsa")
@@ -172,13 +172,13 @@ mod tests {
     #[test]
     fn test_decrypt_sym() {
         let key: [u8; 16] = [
-            101, 50, 51, 100, 55, 101, 53, 101, 99, 99, 52, 49, 48, 57, 48, 0,
+            54, 98, 49, 57, 101, 53, 49, 53, 98, 99, 57, 52, 97, 51, 50, 57,
         ];
         let iv: [u8; 16] = [
-            159, 83, 25, 66, 156, 217, 148, 45, 151, 246, 253, 223, 7, 117, 64, 0,
+            52, 56, 49, 48, 54, 56, 97, 97, 56, 98, 48, 52, 53, 97, 51, 101,
         ];
         let ciphertext = [
-            255, 66, 148, 183, 158, 105, 12, 139, 19, 249, 134, 174, 225, 140, 174, 2,
+            169, 199, 157, 209, 50, 249, 171, 226, 126, 140, 92, 56, 244, 119, 75, 35,
         ];
         let plaintext = decrypt_sym(&key, &iv, &ciphertext);
         let expected_plaintext = b"Hello World!".to_vec();
@@ -189,6 +189,7 @@ mod tests {
     fn test_generate_random_hex_16() {
         let hex: [u8; 16] = generate_random_hex_16();
         assert_eq!(hex.len(), 16);
+        assert!(hex[15] > 0);
     }
 
     fn read_public_key() -> Result<RSAPublicKey> {
