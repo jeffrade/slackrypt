@@ -8,6 +8,45 @@ use log::{debug, info};
 use rand::rngs::OsRng;
 use rsa::{PaddingScheme, PublicKey, RSAPrivateKey, RSAPublicKey};
 
+use crate::io;
+use crate::util;
+
+pub fn slackrypt(plaintext: &[u8], public_key: &RSAPublicKey) -> String {
+    let key: [u8; 16] = generate_random_hex_16();
+    let cipher_vec_key: Vec<u8> = encrypt_data_asym(&key, public_key);
+    let key_hex: String = util::to_hexadecimal_str(&cipher_vec_key);
+    let iv: [u8; 16] = generate_random_hex_16();
+    let ciphertext: Vec<u8> = encrypt_data_sym(&key, &iv, &plaintext);
+    let ciphertext_hex: String = util::to_hexadecimal_str(&ciphertext);
+
+    let begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
+    let version_header: String = String::from("Version: Slackrypt 0.1");
+    let end_header: String = String::from("-----END SLACKRYPT MESSAGE-----");
+
+    io::build_armor_message(
+        &begin_header,
+        &end_header,
+        &version_header,
+        &ciphertext_hex,
+        &key_hex,
+        &iv,
+    )
+}
+
+pub fn unslackrypt(armor: &str) -> String {
+    let private_key: RSAPrivateKey = io::get_private_key_default().unwrap();
+    let file_lines: Vec<&str> = armor.split('\n').collect();
+    let ciphertext_hex_line: &str = file_lines[3];
+    let ciphertext: Vec<u8> = util::from_hexadecimal_str(&ciphertext_hex_line);
+    let key_hex_line: &str = file_lines[4];
+    let key_hex_decoded_line: Vec<u8> = util::from_hexadecimal_str(&key_hex_line);
+    let key: Vec<u8> = decrypt_data_asym(&key_hex_decoded_line, &private_key);
+    let iv_line: &str = file_lines[5];
+    let iv = iv_line.as_bytes().to_vec();
+    let byte_vec: Vec<u8> = decrypt_sym(&key, &iv, &ciphertext);
+    String::from_utf8_lossy(&byte_vec).to_string()
+}
+
 pub fn encrypt_data_asym(data: &[u8], public_key: &RSAPublicKey) -> Vec<u8> {
     let mut rng = OsRng;
     public_key
@@ -117,6 +156,36 @@ mod tests {
     use std::fs::File;
     use std::io::prelude::*;
     use std::io::Result;
+
+    #[test]
+    fn test_slackrypt() {
+        let private_key: RSAPrivateKey = read_private_key().unwrap();
+        let public_key: RSAPublicKey = read_public_key().unwrap();
+        let armor_msg: String = slackrypt("Hello World!".as_bytes(), &public_key);
+        let file_lines: Vec<&str> = armor_msg.split('\n').collect();
+        assert_eq!("-----BEGIN SLACKRYPT MESSAGE-----", file_lines[0]);
+        assert_eq!("Version: Slackrypt 0.1", file_lines[1]);
+        assert_eq!("", file_lines[2]);
+        assert_eq!("-----END SLACKRYPT MESSAGE-----", file_lines[6]);
+
+        let ciphertext_hex_line: &str = file_lines[3];
+        let ciphertext: Vec<u8> = util::from_hexadecimal_str(&ciphertext_hex_line);
+        let key_hex_line: &str = file_lines[4];
+        let encrypted_key: Vec<u8> = util::from_hexadecimal_str(&key_hex_line);
+        let key: Vec<u8> = decrypt_data_asym(&encrypted_key, &private_key);
+        let iv_line: &str = file_lines[5];
+
+        let actual_plaintext: Vec<u8> =
+            decrypt_sym(&key, &iv_line.as_bytes().to_vec(), &ciphertext);
+        assert_eq!(actual_plaintext.as_slice(), "Hello World!".as_bytes());
+    }
+
+    #[test]
+    pub fn test_unslackrypt() {
+        let armor_msg = "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.1\n\n386c7f625d28e307a3213941df5c1ac9\n110deb86b197b4df85ae4c45f06d06c811e2a416e349d9e71b377981e1e55742b1918e55db7b2b9d631f93d45ccd07f28cf6b633aa121775e193d4e40a17603c1a556bc283f2a56a1bd85cb1b7c9f2a1ac6baf029916d9fc1840d3c311a57d0d41c51bec1040b5031274695b5d53dff9f5fa8e6941e12d3a2b4de574c250b7744e415d2605c88829ac564d266f85d52181204aef0963d2c883cbbd24ebe5ffe3e85feeff8f94101ac92c10df222e05d8bbc96f0b93bd4d91c86ff2ff5ff295c796371f5f15815d143015c3e91f80135a00255bd7468c41741dac0784c4c43ad9c4d5ece8d9c9c864eb1023cc6f3f5f904377b351a0ee115f063974d362da8e4c\n95f5991b5289bdcd\n-----END SLACKRYPT MESSAGE-----";
+        let plaintext = unslackrypt(armor_msg);
+        assert_eq!("Hello World!".as_bytes(), plaintext.as_bytes());
+    }
 
     #[test]
     fn test_encrypt_data_asym() {

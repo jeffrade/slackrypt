@@ -16,6 +16,11 @@ pub fn get_public_key(dir: &str) -> Result<RSAPublicKey> {
     Ok(public_key)
 }
 
+pub fn get_private_key_default() -> Result<RSAPrivateKey> {
+    let dir = String::from(env!("HOME")) + "/.slackrypt";
+    get_private_key(&dir)
+}
+
 pub fn get_private_key(dir: &str) -> Result<RSAPrivateKey> {
     let file_name = String::from(dir) + "/key.pem";
     let mut file = File::open(file_name)?;
