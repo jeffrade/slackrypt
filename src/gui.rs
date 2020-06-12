@@ -27,20 +27,19 @@ pub fn init(window_label: &str) {
     let armored_in = Input::new(padding, 340 + padding, window_width - 2 * padding, 150, "");
 
     //Outputs
-    //let mut buffer = TextBuffer::default();
     let mut armored_out = TextDisplay::new(
         padding,
         100,
         window_width - 2 * padding,
         150,
-        &mut TextBuffer::default(),
+        TextBuffer::default(),
     );
     let mut plaintext_out = TextDisplay::new(
         padding,
         510,
         window_width - 2 * padding,
         40,
-        &mut TextBuffer::default(),
+        TextBuffer::default(),
     );
 
     //Buttons
@@ -96,16 +95,14 @@ pub fn init(window_label: &str) {
     encrypt_button.set_callback(Box::new(move || {
         let input: String = plaintext_in.value();
         let result: String = encrypt_text(&input);
-        let mut new_buffer = TextBuffer::default();
-        armored_out.set_buffer(&mut new_buffer);
+        armored_out.set_buffer(TextBuffer::default());
         armored_out.buffer().append(&result);
     }));
 
     decrypt_button.set_callback(Box::new(move || {
         let input: String = armored_in.value();
         let result: String = decrypt_text(&input);
-        let mut new_buffer = TextBuffer::default();
-        plaintext_out.set_buffer(&mut new_buffer);
+        plaintext_out.set_buffer(TextBuffer::default());
         plaintext_out.buffer().append(&result);
     }));
 
