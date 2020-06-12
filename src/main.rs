@@ -8,11 +8,14 @@ use log::{debug, info, warn};
 use rsa::RSAPublicKey;
 
 mod crypto;
+mod gui;
 mod io;
 mod util;
 
 //PKCS1 vs PKCS8 https://stackoverflow.com/questions/48958304/pkcs1-and-pkcs8-format-for-rsa-private-key
 fn main() {
+    //TODO A lot of assert'ing going on here. Anything test-like, give it a new home.
+
     let dir = String::from(env!("HOME")) + "/.slackrypt";
     init(&dir);
 
@@ -66,7 +69,6 @@ fn main() {
         crypto::decrypt_sym(&de_key_vec, &iv.to_vec(), &ciphertext_decoded);
     assert_eq!(decrypted_ciphertext.as_slice(), plaintext.as_slice());
 
-    //Use OpenPGP Armor as inspiration for formatting: https://tools.ietf.org/html/rfc4880#section-6.2
     let begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
     let version_header: String = String::from("Version: Slackrypt 0.1");
     let key_hex: String = util::to_hexadecimal_str(&cipher_vec_key);
@@ -126,6 +128,7 @@ fn main() {
         "decrypted ciphertext is {}",
         String::from_utf8_lossy(decrypted_ciphertext_line.as_slice()).to_string()
     );
+    gui::init(&version_header);
 }
 
 fn init(dir: &str) {

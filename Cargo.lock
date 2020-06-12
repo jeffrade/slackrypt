@@ -90,6 +90,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08c48aae112d48ed9f069b33538ea9e3e90aa263cfa3d1c24309612b1f7472de"
 
 [[package]]
+name = "cc"
+version = "1.0.54"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7bbb73db36c1246e9034e307d0fba23f9a2e251faa47ade70c1bd252220c8311"
+
+[[package]]
 name = "cfg-if"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -107,6 +113,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cmake"
+version = "0.1.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e56268c17a6248366d66d4a47a3381369d068cce8409bb1716ed77ea32163bb"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "colored"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -115,6 +130,35 @@ dependencies = [
  "atty",
  "lazy_static",
  "winapi",
+]
+
+[[package]]
+name = "fltk"
+version = "0.5.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d6dd5569091e78eca2e4f34cff9ea8f8b56807bb4e6a3a1d859ff127cb0f5a1"
+dependencies = [
+ "fltk-derive",
+ "fltk-sys",
+]
+
+[[package]]
+name = "fltk-derive"
+version = "0.5.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "73cf6051e1d558af206608a634844cdba26c9afe5263d9bb353012ad7f6388ed"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "fltk-sys"
+version = "0.5.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "088602400381da49676e4d1e6aed3e160b69a18cc25f8f0e840a0a9ef3d20688"
+dependencies = [
+ "cmake",
 ]
 
 [[package]]
@@ -404,6 +448,7 @@ version = "0.1.0"
 dependencies = [
  "aes-soft",
  "block-modes",
+ "fltk",
  "hex",
  "log",
  "pem",
