@@ -5,8 +5,6 @@ _Disclaimer: This project has not been audited and not recommended for productio
 <img src="https://github.com/jeffrade/slackrypt/blob/master/slackrypt.jpg" alt="logo" width="128" height="128">
 
 ## Prerequisites
- - A [Slack organization](https://slack.com/get-started).
- - Slack [bot keys](https://slack.com/get-started).
  - You must build from source, so [rustup](https://rustup.rs/).
  - Have `openssl` installed (verify with `command -v openssl`).
 
@@ -19,11 +17,6 @@ $ cargo build
 ## Run
 ```
 $ cargo run "Your plaintext message"
-```
-
-## Deploy
-```
-$ bash deploy.sh
 ```
 
 ## Logging
@@ -42,18 +35,5 @@ $ export RUST_LOG=WARN
  - Uses [aes-soft](https://github.com/RustCrypto/block-ciphers/#supported-algorithms) for symmetric encryption.
 
 ## Backlog
-#### Slack
- - https://api.slack.com/events-api
- - https://api.slack.com/rtm
- - https://api.slack.com/apps/A011BQES6MC/general?
- - https://github.com/lins05/slackbot (for reference)
- - https://github.com/slack-rs/slack-rs
- - https://github.com/slack-rs/slack-rs/blob/a6c2fbd5a17c2831a17560b6ebcdce60ce595f18/examples/slack_example.rs
-
-#### AES
- - https://github.com/RustCrypto/block-ciphers#usage
- - https://docs.rs/aes-soft/0.3.3/aes_soft/ 
-
-#### SERVER
- - https://github.com/actix/examples/tree/master/basics
- - https://github.com/actix/examples/blob/master/json/src/main.rs
+#### CRC
+ - radix-64 CRC (Cyclic_redundancy_check), in C https://tools.ietf.org/html/rfc4880#section-6.1

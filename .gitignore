@@ -1,2 +1,3 @@
 /target
-slackrypt.log
+/server/target
+/server/slackrypt-server.log
