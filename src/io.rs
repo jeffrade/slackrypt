@@ -6,19 +6,25 @@ use std::io::{stdout, Result, Write};
 
 use rsa::{RSAPrivateKey, RSAPublicKey};
 
+use crate::util;
+
 pub fn get_public_key(dir: &str) -> Result<RSAPublicKey> {
-    let file_name = String::from(dir) + "/key.pem.pub";
-    let mut file = File::open(file_name)?;
-    let mut file_content = String::new();
-    file.read_to_string(&mut file_content)?;
-    let pem_encoded = pem::parse(file_content).expect("failed to parse pem file");
+    let file_content: String = get_public_key_string(dir).unwrap();
+    let pem_encoded = pem::parse(&file_content).expect("failed to parse pem file");
     let public_key = RSAPublicKey::try_from(pem_encoded).expect("failed to parse key");
     Ok(public_key)
 }
 
+pub fn get_public_key_string(dir: &str) -> Result<String> {
+    let file_name = String::from(dir) + "/key.pem.pub";
+    let mut file = File::open(file_name)?;
+    let mut file_content = String::new();
+    file.read_to_string(&mut file_content)?;
+    Ok(file_content)
+}
+
 pub fn get_private_key_default() -> Result<RSAPrivateKey> {
-    let dir = String::from(env!("HOME")) + "/.slackrypt";
-    get_private_key(&dir)
+    get_private_key(&util::default_dir())
 }
 
 pub fn get_private_key(dir: &str) -> Result<RSAPrivateKey> {

@@ -2,6 +2,10 @@ use std::env;
 use std::path::Path;
 use std::vec::Vec;
 
+pub fn default_dir() -> String {
+    String::from(env!("HOME")) + "/.slackrypt"
+}
+
 pub fn to_hexadecimal_str(vec: &[u8]) -> String {
     let mut hex: String = String::new();
     for u_8 in vec {

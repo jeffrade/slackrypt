@@ -3,6 +3,7 @@ use rsa::RSAPublicKey;
 
 use crate::crypto;
 use crate::io;
+use crate::util;
 
 #[derive(Copy, Clone)]
 pub enum Message {
@@ -135,7 +136,7 @@ pub fn init(window_label: &str) {
 }
 
 fn encrypt_text(plaintext: &str) -> String {
-    let dir = String::from(env!("HOME")) + "/.slackrypt"; //TODO put this in util.rs
+    let dir = util::default_dir();
     let public_key: RSAPublicKey = io::get_public_key(&dir).unwrap();
     crypto::slackrypt(plaintext.as_bytes(), &public_key)
 }

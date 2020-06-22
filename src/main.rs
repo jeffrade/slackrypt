@@ -16,13 +16,15 @@ mod util;
 fn main() {
     //TODO A lot of assert'ing going on here. Anything test-like, give it a new home.
 
-    let dir = String::from(env!("HOME")) + "/.slackrypt";
+    let dir: String = util::default_dir();
     init(&dir);
 
     let private_key = io::get_private_key(&dir).unwrap();
     let public_key: RSAPublicKey = private_key.into();
     let public_key_openssl: RSAPublicKey = io::get_public_key(&dir).unwrap();
     assert_eq!(&public_key, &public_key_openssl);
+
+    info!("\n{}", io::get_public_key_string(&dir).unwrap());
 
     let plaintext: Vec<u8> = util::get_user_input_message();
 
@@ -137,7 +139,7 @@ fn init(dir: &str) {
     match fs::create_dir(dir) {
         Ok(_) => true,
         Err(_) => {
-            warn!("Ignore since ~/.slackrypt dir might already exist.");
+            warn!("Ignore since {} dir might already exist.", dir);
             true
         }
     };
