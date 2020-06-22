@@ -17,7 +17,7 @@ mod db;
 async fn pubkey_upload(user: web::Json<User>) -> HttpResponse {
     info!("payload: {:?}", &user);
     db::insert(&user.0.user, &user.0.pubkey).unwrap();
-    HttpResponse::Ok().json(user.0) // <- send response
+    HttpResponse::Ok().json(user.0)
 }
 
 #[actix_rt::main]

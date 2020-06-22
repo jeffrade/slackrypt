@@ -44,5 +44,3 @@ $ export RUST_LOG=WARN
  - https://github.com/slack-rs/slack-rs/blob/a6c2fbd5a17c2831a17560b6ebcdce60ce595f18/examples/slack_example.rs
 
 #### SERVER
- - https://github.com/actix/examples/tree/master/basics
- - https://github.com/actix/examples/blob/master/json/src/main.rs

@@ -1,4 +1,4 @@
-use log::{info, warn};
+use log::{debug, info, warn};
 use rusqlite::{params, Connection, Result};
 
 #[derive(Debug)]
@@ -42,16 +42,6 @@ pub fn init() -> Result<()> {
         }
     };
 
-    // let me = User {
-    //     id: 0,
-    //     user: "jrade".to_string(),
-    //     pubkey: "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtcCnEuu9FM08PXCv6gQ7\nIZXhXSKiTYmrkje/aOVqYts9ZV9Gmm1/FFPo5QMtpaIxeLbGKFzgsfM4p1NjClkY\n2izBHhZP8foE9kmoy9rIoPw+jSOocQx5r4Kq8QecWyqhiZvnzvVJVQ3mIwr0zppo\n8D49O1XN23pzcmWrFMyH4c7m7A+xDKwFIVboMKRFGGFAPztHELyi+7bgwuiQcKy+\ncRkfI1+6zLWviWcJttnCWHEAm9qyNxeFBUbmb4exgPogAgpjRXzLCK5TISLnz+NM\nRbtmwhDWFMYnfkv1bskYB8KLeZ9aO6mRgsjX7QyTu71ZEFrDLlxuGl/aa3vYaXx5\nrQIDAQAB\n-----END PUBLIC KEY-----\n".to_string(),
-    // };
-    // conn.execute(
-    //     "INSERT INTO user (user, pubkey) VALUES (?1, ?2)",
-    //     params![me.user, me.pubkey],
-    // )?;
-
     let mut stmt = conn.prepare("SELECT id, user, pubkey FROM user")?;
     let user_iter = stmt.query_map(params![], |row| {
         Ok(User {
@@ -62,7 +52,7 @@ pub fn init() -> Result<()> {
     })?;
 
     for user in user_iter {
-        info!("Found user {:?}", user.unwrap());
+        debug!("Current users {:?}", user.unwrap());
     }
     Ok(())
 }
