@@ -122,7 +122,7 @@ pub fn init(window_label: &str) {
                     println!("New not implemented!");
                 }
                 Upload => {
-                    println!("Upload not implemented!");
+                    upload_pubkey();
                 }
                 Quit => {
                     app.quit();
@@ -143,4 +143,28 @@ fn encrypt_text(plaintext: &str) -> String {
 
 fn decrypt_text(armored_msg: &str) -> String {
     crypto::unslackrypt(armored_msg)
+}
+
+fn upload_pubkey() {
+    let dir = util::default_dir();
+    let pubkey: String = io::get_public_key_string(&dir).unwrap();
+    upload("tester", &pubkey).unwrap();
+    println!("{}", &pubkey);
+}
+
+#[tokio::main]
+async fn upload(user: &str, pubkey: &str) -> Result<(), reqwest::Error> {
+    let json_resp: serde_json::Value = reqwest::Client::new()
+        .post("http://127.0.0.1:8080/pubkey/upload")
+        .json(&serde_json::json!({
+            "user": user,
+            "pubkey": pubkey
+        }))
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    println!("{:#?}", json_resp);
+    Ok(())
 }
