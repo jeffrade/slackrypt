@@ -26,6 +26,11 @@ if ! [[ $(command -v rustc) ]]; then
     exit 1;
 fi
 
+if ! [[ $(command -v sqlite3) ]]; then
+    print_error "You must have SQLite3 installed!"
+    exit 1;
+fi
+
 print_info "Staring release..."
 print_info "Building..."
 cargo build --release

@@ -7,6 +7,7 @@ _Disclaimer: This project has not been audited and not recommended for productio
 ## Prerequisites
  - A [Slack organization](https://slack.com/get-started).
  - Slack [bot keys](https://slack.com/get-started).
+ - Have SQLite3 version 3.7.3 or later installed (tested on 3.11.0)
  - You must build from source, so [rustup](https://rustup.rs/).
 
 ## Build
