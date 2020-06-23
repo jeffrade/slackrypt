@@ -10,6 +10,7 @@ use rsa::RSAPublicKey;
 mod crypto;
 mod gui;
 mod io;
+mod prop;
 mod util;
 
 //PKCS1 vs PKCS8 https://stackoverflow.com/questions/48958304/pkcs1-and-pkcs8-format-for-rsa-private-key
@@ -18,6 +19,9 @@ fn main() {
 
     let dir: String = util::default_dir();
     init(&dir);
+
+    let props = prop::get_properties();
+    info!("Loaded properties: {:?}", &props.unwrap());
 
     let private_key = io::get_private_key(&dir).unwrap();
     let public_key: RSAPublicKey = private_key.into();

@@ -51,8 +51,9 @@ pub fn init() -> Result<()> {
         })
     })?;
 
+    debug!("Current users:");
     for user in user_iter {
-        debug!("Current users {:?}", user.unwrap());
+        debug!("{:?}", user.unwrap());
     }
     Ok(())
 }
