@@ -3,6 +3,7 @@ use rsa::RSAPublicKey;
 
 use crate::crypto;
 use crate::io;
+use crate::prop;
 use crate::util;
 
 #[derive(Copy, Clone)]
@@ -154,8 +155,11 @@ fn upload_pubkey() {
 
 #[tokio::main]
 async fn upload(user: &str, pubkey: &str) -> Result<(), reqwest::Error> {
+    let host: String = prop::get_property("host", "127.0.0.1");
+    let port: String = prop::get_property("port", "8080");
+    let url: String = String::from("http://") + &host + ":" + &port + "/pubkey/upload";
     let json_resp: serde_json::Value = reqwest::Client::new()
-        .post("http://127.0.0.1:8080/pubkey/upload")
+        .post(&url)
         .json(&serde_json::json!({
             "user": user,
             "pubkey": pubkey

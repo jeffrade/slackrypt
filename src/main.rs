@@ -20,9 +20,6 @@ fn main() {
     let dir: String = util::default_dir();
     init(&dir);
 
-    let props = prop::get_properties();
-    info!("Loaded properties: {:?}", &props.unwrap());
-
     let private_key = io::get_private_key(&dir).unwrap();
     let public_key: RSAPublicKey = private_key.into();
     let public_key_openssl: RSAPublicKey = io::get_public_key(&dir).unwrap();
@@ -147,6 +144,9 @@ fn init(dir: &str) {
             true
         }
     };
+
+    let props = prop::get_properties();
+    info!("Loaded properties: {:?}", &props.unwrap());
 
     let key_file = String::from(dir) + "/key.pem";
     if !util::keys_exist(&key_file) {

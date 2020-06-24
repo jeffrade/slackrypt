@@ -27,3 +27,16 @@ pub fn get_properties() -> Result<HashMap<String, String>, Error> {
 
     Ok(props)
 }
+
+pub fn get_property(key: &str, default: &str) -> String {
+    match get_properties() {
+        Ok(props) => {
+            if props.contains_key(key) {
+                props.get(key).unwrap().to_string()
+            } else {
+                String::from(default)
+            }
+        }
+        Err(_) => String::from(default),
+    }
+}
