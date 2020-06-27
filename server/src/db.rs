@@ -11,7 +11,7 @@ struct User {
 fn get_connection() -> Result<Connection> {
     let path: String = String::from(env!("HOME")) + "/.slackrypt-server" + "/slackrypt.db3";
     let conn = Connection::open(&path)?;
-    info!("{}", conn.is_autocommit());
+    debug!("is autocommit? {}", conn.is_autocommit());
     Ok(conn)
 }
 
@@ -25,6 +25,7 @@ pub fn insert(user: &str, pubkey: &str) -> Result<()> {
 }
 
 pub fn init() -> Result<()> {
+    info!("Starting SQLite3...");
     let conn: Connection = get_connection().unwrap();
 
     match conn.execute(
