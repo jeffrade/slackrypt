@@ -5,7 +5,7 @@ use std::thread;
 
 use actix_rt::System;
 use actix_web::{dev::Server, middleware, web, App, HttpResponse, HttpServer};
-use log::{debug, info, warn};
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -24,7 +24,7 @@ async fn pubkey_upload(user: web::Json<User>) -> HttpResponse {
     HttpResponse::Ok().json(user.0)
 }
 
-fn main() -> std::io::Result<()> {
+fn main() {
     simple_logger::init_by_env();
     init(&default_dir());
     db::init().unwrap();
@@ -38,11 +38,7 @@ fn main() -> std::io::Result<()> {
     });
     let _srv = rx.recv().unwrap();
 
-    debug!("BEGINBEGINBEGINBEGINBEGINBEGINBEGINBEGINBEGINBEGINBEGINBEGINBEGINBEGINBEGINBEGINBEGINBEGIN");
-    slack::init(); // FIXME Properly run this in a thread like actix HttpServer
-    debug!("ENDENDENDENDENDENDENDENDENDENDENDENDENDENDENDENDENDENDENDENDENDENDENDENDENDENDENDENDENDEND");
-
-    Ok(())
+    slack::init(); //This must be called last
 }
 
 // Inspiration from https://github.com/actix/examples/blob/e8ab9ee7cab3a17aedbddb4800d56d206d0a296f/run-in-thread/src/main.rs

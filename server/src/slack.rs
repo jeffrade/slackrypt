@@ -1,7 +1,5 @@
 use log::info;
-use slack;
 use slack::{Event, RtmClient};
-use std::thread;
 
 struct SlackHandler;
 
@@ -37,15 +35,11 @@ impl slack::EventHandler for SlackHandler {
 
 pub fn init() {
     info!("Starting Slack RTM client...");
-    let thread_handler = thread::spawn(|| {
-        let api_key = env!("BOTUSER_AUTH_ACCESS_TOKEN").to_string();
-        let mut slack_handler = SlackHandler;
-        let r = RtmClient::login_and_run(&api_key, &mut slack_handler);
-        match r {
-            Ok(_) => {}
-            Err(err) => panic!("Error: {}", err),
-        }
-    });
-
-    thread_handler.join().unwrap();
+    let api_key = env!("BOTUSER_AUTH_ACCESS_TOKEN").to_string();
+    let mut slack_handler = SlackHandler;
+    let r = RtmClient::login_and_run(&api_key, &mut slack_handler);
+    match r {
+        Ok(_) => {}
+        Err(err) => panic!("Error: {}", err),
+    }
 }

@@ -9,6 +9,12 @@ _Disclaimer: This project has not been audited and not recommended for productio
  - Slack [bot keys](https://slack.com/get-started) where you must create a [Classic App](https://api.slack.com/rtm#create_a_classic_slack_app).
  - Have SQLite3 version 3.7.3 or later installed (tested on 3.11.0)
  - You must build from source, so [rustup](https://rustup.rs/).
+ - On Linux:
+```
+$ sudo apt-get install build-essential
+$ sudo apt-get install cmake
+$ sudo apt-get install sqlite3 libsqlite3-dev
+```
 
 ## Build
 ```
