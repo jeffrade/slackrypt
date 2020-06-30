@@ -35,6 +35,10 @@ pub fn slackrypt(plaintext: &[u8], public_key: &RSAPublicKey) -> String {
 
 pub fn unslackrypt(armor: &str) -> String {
     let private_key: RSAPrivateKey = io::get_private_key_default().unwrap();
+    unslackrypt_with_key(armor, &private_key)
+}
+
+pub fn unslackrypt_with_key(armor: &str, private_key: &RSAPrivateKey) -> String {
     let file_lines: Vec<&str> = armor.split('\n').collect();
     let ciphertext_hex_line: &str = file_lines[3];
     let ciphertext: Vec<u8> = util::from_hexadecimal_str(&ciphertext_hex_line);
@@ -182,8 +186,9 @@ mod tests {
 
     #[test]
     pub fn test_unslackrypt() {
-        let armor_msg = "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.1\n\n386c7f625d28e307a3213941df5c1ac9\n110deb86b197b4df85ae4c45f06d06c811e2a416e349d9e71b377981e1e55742b1918e55db7b2b9d631f93d45ccd07f28cf6b633aa121775e193d4e40a17603c1a556bc283f2a56a1bd85cb1b7c9f2a1ac6baf029916d9fc1840d3c311a57d0d41c51bec1040b5031274695b5d53dff9f5fa8e6941e12d3a2b4de574c250b7744e415d2605c88829ac564d266f85d52181204aef0963d2c883cbbd24ebe5ffe3e85feeff8f94101ac92c10df222e05d8bbc96f0b93bd4d91c86ff2ff5ff295c796371f5f15815d143015c3e91f80135a00255bd7468c41741dac0784c4c43ad9c4d5ece8d9c9c864eb1023cc6f3f5f904377b351a0ee115f063974d362da8e4c\n95f5991b5289bdcd\n-----END SLACKRYPT MESSAGE-----";
-        let plaintext = unslackrypt(armor_msg);
+        let armor_msg = "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.1\n\n5c5d6d192aec965914f1c2ad7380a6c3\n4b7282437d51b745e43a38e90c5b7b3f044ad5d4fc90bc6b666153be69a532bb3dd7a59301494cc487ab78188922326fadcdd986cb21ee98e96181ad1c9214888f06ac6c73d8a5cbab154836f108297884dabdcc048823898f1b045e3bd3e13e94b607431f6267073ac852ae9335aed3f5a12bdd71b6e3f30427553459651e8e93c30e53136480229f2dc8189019b06f5dfec610181101cdb72856c479fa132ce8cd5950defc8c7af3fc8fe7806a5b10538a42792734bce9dc48bcb6d2802d21fb3c95e199fc9b57d734e3f3359576caf23309eea8761938b3becd0ec1a9ee17a2a7e29db843f23b8f3d99d6653beeddb9d91443c683bca58a41aa12b929b2eb\n1e357ddda8d80d7f\n-----END SLACKRYPT MESSAGE-----";
+        let private_key: RSAPrivateKey = read_private_key().unwrap();
+        let plaintext = unslackrypt_with_key(armor_msg, &private_key);
         assert_eq!("Hello World!".as_bytes(), plaintext.as_bytes());
     }
 
