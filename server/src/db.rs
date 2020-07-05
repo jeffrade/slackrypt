@@ -1,5 +1,7 @@
 use log::{debug, info, warn};
-use rusqlite::{params, Connection, NO_PARAMS, Result};
+use rusqlite::{params, Connection, Result, NO_PARAMS};
+
+use crate::util;
 
 #[derive(Debug)]
 struct User {
@@ -9,7 +11,7 @@ struct User {
 }
 
 fn get_connection() -> Result<Connection> {
-    let path: String = String::from(env!("HOME")) + "/.slackrypt-server" + "/slackrypt.db3";
+    let path: String = util::default_dir() + "/slackrypt.db3";
     let conn = Connection::open(&path)?;
     debug!("is autocommit? {}", conn.is_autocommit());
     Ok(conn)

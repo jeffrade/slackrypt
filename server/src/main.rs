@@ -1,4 +1,3 @@
-use std::env;
 use std::fs;
 use std::sync::mpsc;
 use std::thread;
@@ -7,6 +6,8 @@ use actix_rt::System;
 use actix_web::{dev::Server, middleware, web, App, HttpResponse, HttpServer};
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
+
+mod util;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct User {
@@ -26,7 +27,7 @@ async fn pubkey_upload(user: web::Json<User>) -> HttpResponse {
 
 fn main() {
     simple_logger::init_by_env();
-    init(&default_dir());
+    init();
     db::init().unwrap();
 
     let (tx, rx) = mpsc::channel();
@@ -61,16 +62,13 @@ fn start_server(server: String, tx: mpsc::Sender<Server>) -> std::io::Result<()>
     sys.block_on(srv)
 }
 
-fn init(dir: &str) {
-    match fs::create_dir(dir) {
+fn init() {
+    let dir: String = util::default_dir();
+    match fs::create_dir(&dir) {
         Ok(_) => true,
         Err(_) => {
             warn!("Ignore since {} dir might already exist.", dir);
             true
         }
     };
-}
-
-fn default_dir() -> String {
-    String::from(env!("HOME")) + "/.slackrypt-server"
 }
