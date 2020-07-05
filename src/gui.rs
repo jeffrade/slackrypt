@@ -1,4 +1,5 @@
 use fltk::{app::*, button::*, input::*, menu::*, text::*, window::Window};
+use log::debug;
 use rsa::RSAPublicKey;
 
 use crate::crypto;
@@ -10,6 +11,7 @@ use crate::util;
 pub enum Message {
     New,
     Upload,
+    Users,
     Quit,
 }
 
@@ -82,6 +84,13 @@ pub fn init(window_label: &str) {
     );
 
     menu.add(
+        "File/Download Public Keys",
+        Shortcut::None,
+        MenuFlag::Normal,
+        Box::new(move || s.send(Message::Users)),
+    );
+
+    menu.add(
         "File/Quit",
         Shortcut::None,
         MenuFlag::Normal,
@@ -125,6 +134,9 @@ pub fn init(window_label: &str) {
                 Upload => {
                     upload_pubkey();
                 }
+                Users => {
+                    get_user_pubkeys();
+                }
                 Quit => {
                     app.quit();
                 }
@@ -149,8 +161,31 @@ fn decrypt_text(armored_msg: &str) -> String {
 fn upload_pubkey() {
     let dir = util::default_dir();
     let pubkey: String = io::get_public_key_string(&dir).unwrap();
-    upload("tester", &pubkey).unwrap();
+    upload("tester", &pubkey).unwrap(); //FIXME get user (id, handle, username?) from slackrypt-server
     println!("{}", &pubkey);
+}
+
+fn get_user_pubkeys() {
+    let user_pubkeys: Vec<String> = get_pubkeys().unwrap();
+    io::update_users_file(user_pubkeys).unwrap();
+}
+
+#[tokio::main]
+async fn get_pubkeys() -> Result<Vec<String>, reqwest::Error> {
+    let host: String = prop::get_property("host", "127.0.0.1");
+    let port: String = prop::get_property("port", "8080");
+    let url: String = String::from("http://") + &host + ":" + &port + "/pubkey/users";
+    let json_resp: serde_json::Value = reqwest::Client::new()
+        .get(&url)
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    debug!("{:#?}", json_resp);
+    let resp: String = json_resp.to_string();
+    let pubkeys: Vec<String> = serde_json::from_str(&resp).unwrap();
+    Ok(pubkeys)
 }
 
 #[tokio::main]

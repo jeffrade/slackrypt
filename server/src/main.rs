@@ -4,7 +4,7 @@ use std::thread;
 
 use actix_rt::System;
 use actix_web::{dev::Server, middleware, web, App, HttpResponse, HttpServer};
-use log::{info, warn};
+use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 
 mod util;
@@ -23,6 +23,13 @@ async fn pubkey_upload(user: web::Json<User>) -> HttpResponse {
     info!("payload: {:?}", &user);
     db::insert(&user.0.user, &user.0.pubkey).unwrap();
     HttpResponse::Ok().json(user.0)
+}
+
+// curl -H "Content-Type: application/json" http://127.0.0.1:8080/pubkey/users
+async fn pubkey_users() -> HttpResponse {
+    debug!("pubkey_users() entering...");
+    let users: Vec<String> = db::get_users_all().unwrap();
+    HttpResponse::Ok().json(users)
 }
 
 fn main() {
@@ -51,6 +58,7 @@ fn start_server(server: String, tx: mpsc::Sender<Server>) -> std::io::Result<()>
         App::new()
             .wrap(middleware::Logger::default())
             .service(web::resource("/pubkey/upload").route(web::post().to(pubkey_upload)))
+            .service(web::resource("/pubkey/users").route(web::get().to(pubkey_users)))
     })
     .bind(server)?
     .run();

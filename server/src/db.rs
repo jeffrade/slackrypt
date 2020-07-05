@@ -17,6 +17,7 @@ fn get_connection() -> Result<Connection> {
     Ok(conn)
 }
 
+//FIXME INSERTs duplicate record for `user` (instead should UPDATE on `user`)
 pub fn insert(user: &str, pubkey: &str) -> Result<()> {
     let conn: Connection = get_connection().unwrap();
     conn.execute(

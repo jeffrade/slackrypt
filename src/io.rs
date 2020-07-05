@@ -99,6 +99,19 @@ pub fn build_armor_message(
     data
 }
 
+pub fn update_users_file(users: Vec<String>) -> Result<()> {
+    let path = util::default_dir() + "/slackrypt.users";
+    let mut f = File::create(path)?;
+
+    let mut s = String::new();
+    for u in users {
+        s.push_str(&u);
+        s.push('\n');
+    }
+
+    f.write_all(s.as_bytes())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
