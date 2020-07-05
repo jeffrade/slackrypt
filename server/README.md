@@ -44,4 +44,3 @@ $ export RUST_LOG=WARN
 ## Backlog
 #### SERVER
  - Respond to Slack message asking for host and port
- - Implement endpoint to respond with all user's PK's from SQLite3 db

@@ -46,7 +46,6 @@ $ export RUST_LOG=WARN
 ## Backlog
  - How to bind this client user to their Slack user? Send message to /server via Slack and have /server read Slack user? Using email address adds a layer of complexit (mapping email to Slack user_id). 
  - Menu item where user can update host and port (currently stored in slackrypt.properties).
- - Add Menu item "Sync User Keys" to get all stored user's PK in /server SQLite3 db
  - Implement "New Public Key" in GUI menu.
 #### CRC
  - radix-64 CRC (Cyclic_redundancy_check), in C https://tools.ietf.org/html/rfc4880#section-6.1
