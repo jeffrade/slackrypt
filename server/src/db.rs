@@ -1,5 +1,5 @@
 use log::{debug, info, warn};
-use rusqlite::{params, Connection, Result};
+use rusqlite::{params, Connection, NO_PARAMS, Result};
 
 #[derive(Debug)]
 struct User {
@@ -18,10 +18,26 @@ fn get_connection() -> Result<Connection> {
 pub fn insert(user: &str, pubkey: &str) -> Result<()> {
     let conn: Connection = get_connection().unwrap();
     conn.execute(
-        "INSERT INTO user (user, pubkey) VALUES (?1, ?2)",
+        "INSERT INTO users (user, pubkey) VALUES (?1, ?2)",
         params![user, pubkey],
     )?;
     Ok(())
+}
+
+pub fn get_users_all() -> Result<Vec<String>> {
+    let conn: Connection = get_connection().unwrap();
+    let mut stmt = conn.prepare("SELECT user, pubkey FROM users")?;
+    let mut rows = stmt.query(NO_PARAMS)?;
+
+    let mut users = Vec::new();
+    while let Some(row) = rows.next()? {
+        let user: String = row.get(0)?;
+        let pubkey: String = row.get(1)?;
+        let user_csv = user + "," + &pubkey;
+        users.push(user_csv);
+    }
+
+    Ok(users)
 }
 
 pub fn init() -> Result<()> {
@@ -29,7 +45,7 @@ pub fn init() -> Result<()> {
     let conn: Connection = get_connection().unwrap();
 
     match conn.execute(
-        "CREATE TABLE user (
+        "CREATE TABLE users (
                   id              INTEGER PRIMARY KEY,
                   user            TEXT NOT NULL,
                   pubkey          TEXT NOT NULL
@@ -43,18 +59,11 @@ pub fn init() -> Result<()> {
         }
     };
 
-    let mut stmt = conn.prepare("SELECT id, user, pubkey FROM user")?;
-    let user_iter = stmt.query_map(params![], |row| {
-        Ok(User {
-            id: row.get(0)?,
-            user: row.get(1)?,
-            pubkey: row.get(2)?,
-        })
-    })?;
+    let users: Vec<String> = get_users_all().unwrap();
 
     debug!("Current users:");
-    for user in user_iter {
-        debug!("{:?}", user.unwrap());
+    for user in users {
+        debug!("{:?}", user);
     }
     Ok(())
 }
