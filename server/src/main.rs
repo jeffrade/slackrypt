@@ -4,11 +4,10 @@ use std::thread;
 
 use log::warn;
 
-mod util;
-
 mod db;
 mod server;
 mod slack;
+mod util;
 
 fn main() {
     simple_logger::init_by_env();
@@ -16,9 +15,9 @@ fn main() {
     db::init().unwrap();
 
     let (tx, rx) = mpsc::channel();
-    let host: &str = "127.0.0.1";
-    let port: &str = "8080";
-    let server: String = String::from(host) + ":" + port;
+    let host: String = util::get_host();
+    let port: String = util::get_port();
+    let server: String = String::from(&host) + ":" + &port;
     thread::spawn(move || {
         let _ = server::start_server(server, tx);
     });
