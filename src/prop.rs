@@ -19,7 +19,7 @@ pub fn get_properties() -> Result<HashMap<String, String>, Error> {
             for l in reader.lines() {
                 let line: String = l.unwrap();
                 let kv: Vec<&str> = line.splitn(2, '=').collect();
-                if kv.len() == 2 { 
+                if kv.len() == 2 {
                     props.insert(String::from(kv[0]), String::from(kv[1]));
                 }
             }
@@ -43,4 +43,31 @@ pub fn get_property(key: &str, default: &str) -> String {
         }
         Err(_) => String::from(default),
     }
+}
+
+pub fn upsert_property(key: &str, new_value: &str) -> Result<(), Error> {
+    let mut curr_props: HashMap<String, String> = get_properties().unwrap();
+    if curr_props.contains_key(key) {
+        if let Some(curr_value) = curr_props.get_mut(key) {
+            *curr_value = new_value.to_string();
+        }
+    } else {
+        curr_props.insert(key.to_string(), new_value.to_string());
+    }
+    write_properties(curr_props)
+}
+
+fn write_properties(props: HashMap<String, String>) -> Result<(), Error> {
+    let path = util::default_dir() + PROP_FILE_NAME;
+    let mut f = File::create(path)?;
+    let mut s = String::new();
+
+    for (k, v) in props {
+        s.push_str(&k);
+        s.push('=');
+        s.push_str(&v);
+        s.push('\n');
+    }
+
+    f.write_all(s.as_bytes())
 }
