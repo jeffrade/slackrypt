@@ -172,11 +172,10 @@ fn get_user_pubkeys() {
 
 #[tokio::main]
 async fn get_pubkeys() -> Result<Vec<String>, reqwest::Error> {
-    let host: String = prop::get_property("host", "127.0.0.1");
-    let port: String = prop::get_property("port", "8080");
-    let url: String = String::from("http://") + &host + ":" + &port + "/pubkey/users";
+    let base_url: String = prop::get_property("server_base_url", "http://127.0.0.1:8080");
+    let endpoint: String = base_url + "/pubkey/users";
     let json_resp: serde_json::Value = reqwest::Client::new()
-        .get(&url)
+        .get(&endpoint)
         .send()
         .await?
         .json()
@@ -190,11 +189,10 @@ async fn get_pubkeys() -> Result<Vec<String>, reqwest::Error> {
 
 #[tokio::main]
 async fn upload(user: &str, pubkey: &str) -> Result<(), reqwest::Error> {
-    let host: String = prop::get_property("host", "127.0.0.1");
-    let port: String = prop::get_property("port", "8080");
-    let url: String = String::from("http://") + &host + ":" + &port + "/pubkey/upload";
+    let base_url: String = prop::get_property("server_base_url", "http://127.0.0.1:8080");
+    let endpoint: String = base_url + "/pubkey/upload";
     let json_resp: serde_json::Value = reqwest::Client::new()
-        .post(&url)
+        .post(&endpoint)
         .json(&serde_json::json!({
             "user": user,
             "pubkey": pubkey
