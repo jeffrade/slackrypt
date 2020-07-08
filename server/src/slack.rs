@@ -1,6 +1,8 @@
 use log::info;
 use slack::{Event, RtmClient};
 
+use crate::util;
+
 struct SlackHandler;
 
 impl slack::EventHandler for SlackHandler {
@@ -14,7 +16,7 @@ impl slack::EventHandler for SlackHandler {
 
     fn on_connect(&mut self, cli: &RtmClient) {
         info!("on_connect");
-        let channel_name = env!("SLACK_CHANNEL_NAME");
+        let channel_name: String = util::get_env_var("SLACK_CHANNEL_NAME", "general");
         // find the channel id from the `StartResponse`
         let channel_id = cli
             .start_response()
@@ -23,7 +25,7 @@ impl slack::EventHandler for SlackHandler {
             .and_then(|channels| {
                 channels.iter().find(|chan| match chan.name {
                     None => false,
-                    Some(ref name) => name == channel_name,
+                    Some(ref name) => name == &channel_name,
                 })
             })
             .and_then(|chan| chan.id.as_ref())
@@ -35,7 +37,7 @@ impl slack::EventHandler for SlackHandler {
 
 pub fn init() {
     info!("Starting Slack RTM client...");
-    let api_key = env!("BOTUSER_AUTH_ACCESS_TOKEN").to_string();
+    let api_key: String = util::get_env_var("BOTUSER_AUTH_ACCESS_TOKEN", "");
     let mut slack_handler = SlackHandler;
     let r = RtmClient::login_and_run(&api_key, &mut slack_handler);
     match r {
