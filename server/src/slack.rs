@@ -3,7 +3,10 @@ use slack::api::rtm::StartResponse;
 use slack::api::{Channel, Message, MessageStandard, User};
 use slack::{Event, RtmClient};
 
+use crate::db;
 use crate::util;
+
+const DIRECT_MSG_PREFIX: char = 'D';
 
 struct SlackHandler {
     user_id: String,
@@ -36,6 +39,14 @@ impl slack::EventHandler for SlackHandler {
 
         // listen for commands
         debug!("event_text from Event: {}", &event_text);
+
+        if &event_text == "token" && channel_id.starts_with(DIRECT_MSG_PREFIX) {
+            let rand: u128 = util::generate_rand();
+            let rand_str: String = rand.to_string();
+            let _ = db::insert_token_for_user(&sender, &rand_str);
+            let _ = cli.sender().send_message(&channel_id, &rand_str);
+        }
+
         if event_text.starts_with(&self.reply_pattern) {
             let args: Vec<&str> = event_text.split(' ').collect();
             debug!("args are {:?}", args);
