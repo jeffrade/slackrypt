@@ -15,11 +15,9 @@ fn main() {
     db::init().unwrap();
 
     let (tx, rx) = mpsc::channel();
-    let host: String = util::get_env_var("SLACKRYPT_HOST", "127.0.0.1");
-    let port: String = util::get_env_var("SLACKRYPT_PORT", "8080");
-    let server: String = String::from(&host) + ":" + &port;
+    let server_base_url: String = util::get_env_var("SLACKRYPT_BASE_URL", "127.0.0.1:8080");
     thread::spawn(move || {
-        let _ = server::start_server(server, tx);
+        let _ = server::start_server(server_base_url, tx);
     });
     let _srv = rx.recv().unwrap();
 

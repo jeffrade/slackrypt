@@ -18,6 +18,7 @@ pub fn start_server(server: String, tx: mpsc::Sender<Server>) -> std::io::Result
     info!("Starting HTTP service...");
     let mut sys = System::new("slackrypt-server");
 
+    //FIXME Support https https://github.com/actix/examples/tree/master/openssl
     let srv = HttpServer::new(|| {
         App::new()
             .wrap(middleware::Logger::default())
