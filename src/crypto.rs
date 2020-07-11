@@ -119,6 +119,7 @@ pub fn openssl_pub_key_out(file_name: &str) {
     chmod_file(&pub_key_file, "0644")
 }
 
+//PKCS1 vs PKCS8 https://stackoverflow.com/questions/48958304/pkcs1-and-pkcs8-format-for-rsa-private-key
 // openssl genrsa -out test_key.pem 2048
 pub fn openssl_generate(file_name: &str, bits: i32) {
     let cmd = Command::new("openssl")
