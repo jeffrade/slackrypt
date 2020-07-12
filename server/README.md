@@ -43,4 +43,3 @@ $ export RUST_LOG=WARN
 ```
 ## Backlog
 #### SERVER
- - Respond to Slack message asking for host and port

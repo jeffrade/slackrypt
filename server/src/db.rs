@@ -31,21 +31,11 @@ pub fn upsert_pubkey(user: &str, pubkey: &str) -> Result<()> {
     }
 }
 
-pub fn update_pubkey(user: &str, pubkey: &str) -> Result<()> {
+fn update_pubkey(user: &str, pubkey: &str) -> Result<()> {
     let conn: Connection = get_connection().unwrap();
     conn.execute(
         "UPDATE users SET pubkey=?1 WHERE user=?2",
         params![pubkey, user],
-    )?;
-    Ok(())
-}
-
-pub fn insert_token_for_user(user: &str, token: &str) -> Result<()> {
-    let conn: Connection = get_connection().unwrap();
-    let expires: u32 = util::get_current_time_plus(300);
-    conn.execute(
-        "INSERT INTO tokens (user, token, expires) VALUES (?1, ?2, ?3)",
-        params![user, token, expires],
     )?;
     Ok(())
 }
@@ -95,21 +85,6 @@ pub fn init() -> Result<()> {
         Ok(_) => true,
         Err(_) => {
             warn!("Ignore since user table might already exist.");
-            true
-        }
-    };
-
-    match conn.execute(
-        "CREATE TABLE tokens (
-                  user            TEXT NOT NULL,
-                  token           TEXT NOT NULL,
-                  expires         INTEGER NOT NULL
-                  )",
-        params![],
-    ) {
-        Ok(_) => true,
-        Err(_) => {
-            warn!("Ignore since token table might already exist.");
             true
         }
     };

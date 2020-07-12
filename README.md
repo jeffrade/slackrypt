@@ -40,12 +40,10 @@ $ export RUST_LOG=WARN
 
 ## Information
  - Uses `openssl` for key generation.
- - Uses https://github.com/RustCrypto/RSA for parsing/loading keys, encrypting and decrypting plaintext.
- - Uses [aes-soft](https://github.com/RustCrypto/block-ciphers/#supported-algorithms) for symmetric encryption.
+ - Uses https://github.com/RustCrypto/RSA for parsing/loading keys, encrypting and decrypting symmetric keys.
+ - Uses [aes-soft](https://github.com/RustCrypto/block-ciphers/#supported-algorithms) for symmetric encryption of plaintext.
 
 ## Backlog
- - How to bind this client user to their Slack user? Send message to /server via Slack and have /server read Slack user? Using email address adds a layer of complexit (mapping email to Slack user_id). 
- - Menu item where user can update host and port (currently stored in slackrypt.properties).
  - Implement "New Public Key" in GUI menu.
 #### CRC
  - radix-64 CRC (Cyclic_redundancy_check), in C https://tools.ietf.org/html/rfc4880#section-6.1

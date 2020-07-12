@@ -22,6 +22,12 @@ impl SlackHandler {
     fn is_direct_msg(&self, channel_id: &str) -> bool {
         channel_id.starts_with(self.direct_msg_prefix)
     }
+
+    fn is_public_key(&self, event_text: &str, channel_id: &str) -> bool {
+        self.is_direct_msg(channel_id)
+            && event_text.starts_with("-----BEGIN PUBLIC KEY-----")
+            && event_text.ends_with("-----END PUBLIC KEY-----")
+    }
 }
 
 impl slack::EventHandler for SlackHandler {
@@ -50,20 +56,31 @@ impl slack::EventHandler for SlackHandler {
         // listen for commands
         debug!("event_text from Event: {}", &event_text);
 
-        if &event_text == "token" && self.is_direct_msg(&channel_id) {
-            let rand: u128 = util::generate_rand();
-            let rand_str: String = rand.to_string();
-            let _ = db::insert_token_for_user(&sender, &rand_str);
-            let _ = cli.sender().send_message(&channel_id, &rand_str);
+        if (&event_text == "init" || &event_text == "help") && self.is_direct_msg(&channel_id) {
+            let response = "Copy and run this in your terminal:\n`echo \"server_base_url=http://"
+                .to_string()
+                + &self.server_base_url
+                + "\" >> ~/.slackrypt/slackrypt.properties`\n\nAfter that is done, please paste your public key found at `~/.slackrypt/key.pem.pub`";
+            let _ = cli.sender().send_message(&channel_id, &response);
+        }
+
+        if self.is_public_key(&event_text.trim(), &channel_id) {
+            let _ = db::upsert_pubkey(&sender, event_text.trim()).unwrap();
+            let response: String = format!("Thank you. BTW, your Slack id is {}", &sender);
+            let _ = cli.sender().send_message(&channel_id, &response);
         }
 
         if self.should_reply(&event_text) {
             let args: Vec<&str> = event_text.split(' ').collect();
             debug!("args are {:?}", args);
             if args.len() > 1 {
-                let response: String =
-                    format!("I haven't learned how to execute '{}' yet.", args[1]);
-                let _ = cli.sender().send_message(&channel_id, &response);
+                if args[1] == "help" {
+                    let _ = cli.sender().send_message(&channel_id, "DM me with the command 'init' to get started.");
+                } else {
+                    let response: String =
+                        format!("I haven't learned how to execute '{}' yet.", args[1]);
+                    let _ = cli.sender().send_message(&channel_id, &response);
+                }
             }
         }
     }
