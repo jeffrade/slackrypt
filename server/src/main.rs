@@ -16,12 +16,13 @@ fn main() {
 
     let (tx, rx) = mpsc::channel();
     let server_base_url: String = util::get_env_var("SLACKRYPT_BASE_URL", "127.0.0.1:8080");
+    let copy_of: String = String::from(&server_base_url);
     thread::spawn(move || {
-        let _ = server::start_server(server_base_url, tx);
+        let _ = server::start_server(copy_of, tx);
     });
     let _srv = rx.recv().unwrap();
 
-    slack::init(); //This must be called last
+    slack::init(&server_base_url); //This must be called last
 }
 
 fn init() {

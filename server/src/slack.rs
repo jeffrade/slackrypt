@@ -6,12 +6,22 @@ use slack::{Event, RtmClient};
 use crate::db;
 use crate::util;
 
-const DIRECT_MSG_PREFIX: char = 'D';
-
 struct SlackHandler {
+    server_base_url: String,
+    direct_msg_prefix: char,
     user_id: String,
     real_name: String,
     reply_pattern: String,
+}
+
+impl SlackHandler {
+    fn should_reply(&self, event_text: &str) -> bool {
+        event_text.starts_with(&self.reply_pattern)
+    }
+
+    fn is_direct_msg(&self, channel_id: &str) -> bool {
+        channel_id.starts_with(self.direct_msg_prefix)
+    }
 }
 
 impl slack::EventHandler for SlackHandler {
@@ -40,14 +50,14 @@ impl slack::EventHandler for SlackHandler {
         // listen for commands
         debug!("event_text from Event: {}", &event_text);
 
-        if &event_text == "token" && channel_id.starts_with(DIRECT_MSG_PREFIX) {
+        if &event_text == "token" && self.is_direct_msg(&channel_id) {
             let rand: u128 = util::generate_rand();
             let rand_str: String = rand.to_string();
             let _ = db::insert_token_for_user(&sender, &rand_str);
             let _ = cli.sender().send_message(&channel_id, &rand_str);
         }
 
-        if event_text.starts_with(&self.reply_pattern) {
+        if self.should_reply(&event_text) {
             let args: Vec<&str> = event_text.split(' ').collect();
             debug!("args are {:?}", args);
             if args.len() > 1 {
@@ -101,16 +111,20 @@ impl slack::EventHandler for SlackHandler {
         // set the String pattern to look for when responding to @Slackrypt <command>
         self.reply_pattern = "<@".to_string() + &this_bot_user_id + "> ";
 
-        // Send a message over the real time api websocket
-        let _ = cli.sender().send_message(&channel_id, "I'm now connected!");
+        // Send connected message to channel
+        let connection_msg: String =
+            "I'm up! You can connect to me at ".to_string() + &self.server_base_url;
+        let _ = cli.sender().send_message(&channel_id, &connection_msg);
     }
 }
 
-pub fn init() {
+pub fn init(server_base_url: &str) {
     info!("Starting Slack RTM client...");
     let api_key: String = util::get_env_var("BOTUSER_AUTH_ACCESS_TOKEN", "");
     let botuser_name: String = util::get_env_var("BOTUSER_REAL_NAME", "Slackrypt");
     let mut slack_handler = SlackHandler {
+        server_base_url: server_base_url.to_string(),
+        direct_msg_prefix: 'D',
         user_id: "unknown".to_string(),
         real_name: botuser_name,
         reply_pattern: "unknown".to_string(),
@@ -118,6 +132,6 @@ pub fn init() {
     let r = RtmClient::login_and_run(&api_key, &mut slack_handler);
     match r {
         Ok(_) => {}
-        Err(err) => panic!("Error: {}", err),
+        Err(err) => panic!("Err: Could not login and start slack client! {}", err),
     }
 }
