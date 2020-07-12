@@ -10,7 +10,6 @@ use crate::util;
 #[derive(Copy, Clone)]
 pub enum Message {
     New,
-    Upload,
     Users,
     Quit,
 }
@@ -77,13 +76,6 @@ pub fn init(window_label: &str) {
     );
 
     menu.add(
-        "File/Upload Public Key",
-        Shortcut::None,
-        MenuFlag::Normal,
-        Box::new(move || s.send(Message::Upload)),
-    );
-
-    menu.add(
         "File/Download Public Keys",
         Shortcut::None,
         MenuFlag::Normal,
@@ -131,9 +123,6 @@ pub fn init(window_label: &str) {
                 New => {
                     println!("New not implemented!");
                 }
-                Upload => {
-                    upload_pubkey();
-                }
                 Users => {
                     get_user_pubkeys();
                 }
@@ -158,13 +147,6 @@ fn decrypt_text(armored_msg: &str) -> String {
     crypto::unslackrypt(armored_msg)
 }
 
-fn upload_pubkey() {
-    let dir = util::default_dir();
-    let pubkey: String = io::get_public_key_string(&dir).unwrap();
-    upload("tester", &pubkey).unwrap(); //FIXME get user (id, handle, username?) from slackrypt-server
-    println!("{}", &pubkey);
-}
-
 fn get_user_pubkeys() {
     let user_pubkeys: Vec<String> = get_pubkeys().unwrap();
     io::update_users_file(user_pubkeys).unwrap();
@@ -185,23 +167,4 @@ async fn get_pubkeys() -> Result<Vec<String>, reqwest::Error> {
     let resp: String = json_resp.to_string();
     let pubkeys: Vec<String> = serde_json::from_str(&resp).unwrap();
     Ok(pubkeys)
-}
-
-#[tokio::main]
-async fn upload(user: &str, pubkey: &str) -> Result<(), reqwest::Error> {
-    let base_url: String = prop::get_property("server_base_url", "http://127.0.0.1:8080");
-    let endpoint: String = base_url + "/pubkey/upload";
-    let json_resp: serde_json::Value = reqwest::Client::new()
-        .post(&endpoint)
-        .json(&serde_json::json!({
-            "user": user,
-            "pubkey": pubkey
-        }))
-        .send()
-        .await?
-        .json()
-        .await?;
-
-    println!("{:#?}", json_resp);
-    Ok(())
 }
