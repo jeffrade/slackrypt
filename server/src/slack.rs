@@ -2,10 +2,12 @@ use log::{debug, info};
 use slack::api::rtm::StartResponse;
 use slack::api::{Channel, Message, MessageStandard, User};
 use slack::{Event, RtmClient};
+use std::vec::Vec;
 
 use crate::db;
 use crate::util;
 
+//TODO Add a user cache where user_id is the index
 struct SlackHandler {
     server_base_url: String,
     direct_msg_prefix: char,
@@ -35,7 +37,7 @@ impl slack::EventHandler for SlackHandler {
         let mut event_text: String = String::new();
         let mut sender: String = String::new();
         let mut channel_id: String = String::new();
-
+        debug!("\n\n#####################debug event\n{:?}\n\n", event);
         match event {
             Event::Message(message) => match *message {
                 Message::Standard(MessageStandard {
@@ -54,8 +56,6 @@ impl slack::EventHandler for SlackHandler {
         }
 
         // listen for commands
-        debug!("event_text from Event: {}", &event_text);
-
         if (&event_text == "init" || &event_text == "help") && self.is_direct_msg(&channel_id) {
             let response = "Copy and run this in your terminal:\n`echo \"server_base_url=http://"
                 .to_string()
@@ -66,7 +66,8 @@ impl slack::EventHandler for SlackHandler {
 
         if self.is_public_key(&event_text.trim(), &channel_id) {
             let _ = db::upsert_pubkey(&sender, event_text.trim()).unwrap();
-            let response: String = format!("Thank you. BTW, your Slack id is {}", &sender);
+            let response: String =
+                format!("Thank you. If you're curious, your Slack id is {}", &sender);
             let _ = cli.sender().send_message(&channel_id, &response);
         }
 
@@ -74,8 +75,11 @@ impl slack::EventHandler for SlackHandler {
             let args: Vec<&str> = event_text.split(' ').collect();
             debug!("args are {:?}", args);
             if args.len() > 1 {
+                //add DM commands to take action on here
                 if args[1] == "help" {
-                    let _ = cli.sender().send_message(&channel_id, "DM me with the command 'init' to get started.");
+                    let _ = cli
+                        .sender()
+                        .send_message(&channel_id, "DM me with the command 'init' to get started.");
                 } else {
                     let response: String =
                         format!("I haven't learned how to execute '{}' yet.", args[1]);
@@ -93,9 +97,8 @@ impl slack::EventHandler for SlackHandler {
         info!("on_connect");
         let channel_name: String = util::get_env_var("SLACK_CHANNEL_NAME", "general");
         let resp: &StartResponse = cli.start_response();
-
-        let channels: &std::vec::Vec<Channel> =
-            resp.channels.as_ref().expect("Could not get channels");
+        let users: &Vec<User> = resp.users.as_ref().expect("Could not get users");
+        let channels: &Vec<Channel> = resp.channels.as_ref().expect("Could not get channels");
 
         // find the channel id from the `StartResponse`
         let channel: &Channel = channels
@@ -107,8 +110,16 @@ impl slack::EventHandler for SlackHandler {
             .unwrap();
         let channel_id: String = channel.id.as_ref().unwrap().to_string();
 
+        // find all human users to persist initial info
+        let mut user_info: Vec<(&str, &str, &str)> = Vec::new();
+        for u in users {
+            if !u.is_bot.unwrap() && !u.deleted.unwrap() {
+                user_info.push((u.id.as_ref().unwrap(), u.name.as_ref().unwrap(), ""));
+            }
+        }
+        db::insert_pubkeys(&user_info).unwrap();
+
         // find bot user id
-        let users: &std::vec::Vec<User> = resp.users.as_ref().expect("Could not get users");
         let this_bot_user: &User = users
             .iter()
             .find(|u| match u.profile {
@@ -129,8 +140,10 @@ impl slack::EventHandler for SlackHandler {
         self.reply_pattern = "<@".to_string() + &this_bot_user_id + "> ";
 
         // Send connected message to channel
-        let connection_msg: String =
-            "I'm up! You can connect to me at ".to_string() + &self.server_base_url;
+        let connection_msg: String = format!(
+            "I'm up! You can connect to me at {} or DM with 'init'.",
+            &self.server_base_url
+        );
         let _ = cli.sender().send_message(&channel_id, &connection_msg);
     }
 }
