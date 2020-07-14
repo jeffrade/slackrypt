@@ -37,11 +37,11 @@ fn insert_pubkey(user_id: &str, name: &str, pubkey: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn upsert_pubkey(user_id: &str, pubkey: &str) -> Result<()> {
+pub fn upsert_pubkey(user_id: &str, name: &str, pubkey: &str) -> Result<()> {
     if has_pubkey(user_id) {
         update_pubkey(user_id, pubkey)
     } else {
-        insert_pubkey(user_id, user_id, pubkey)
+        insert_pubkey(user_id, name, pubkey)
     }
 }
 

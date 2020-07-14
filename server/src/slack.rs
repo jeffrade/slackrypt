@@ -2,18 +2,19 @@ use log::{debug, info};
 use slack::api::rtm::StartResponse;
 use slack::api::{Channel, Message, MessageStandard, User};
 use slack::{Event, RtmClient};
+use std::collections::HashMap;
 use std::vec::Vec;
 
 use crate::db;
 use crate::util;
 
-//TODO Add a user cache where user_id is the index
 struct SlackHandler {
     server_base_url: String,
     direct_msg_prefix: char,
     user_id: String,
     real_name: String,
     reply_pattern: String,
+    users_cache: HashMap<String, String>,
 }
 
 impl SlackHandler {
@@ -65,7 +66,8 @@ impl slack::EventHandler for SlackHandler {
         }
 
         if self.is_public_key(&event_text.trim(), &channel_id) {
-            let _ = db::upsert_pubkey(&sender, event_text.trim()).unwrap();
+            let user_name: String = self.users_cache.get(&sender).unwrap().to_string();
+            let _ = db::upsert_pubkey(&sender, &user_name, event_text.trim()).unwrap();
             let response: String =
                 format!("Thank you. If you're curious, your Slack id is {}", &sender);
             let _ = cli.sender().send_message(&channel_id, &response);
@@ -75,7 +77,7 @@ impl slack::EventHandler for SlackHandler {
             let args: Vec<&str> = event_text.split(' ').collect();
             debug!("args are {:?}", args);
             if args.len() > 1 {
-                //add DM commands to take action on here
+                //add DM commands here that need action
                 if args[1] == "help" {
                     let _ = cli
                         .sender()
@@ -115,6 +117,10 @@ impl slack::EventHandler for SlackHandler {
         for u in users {
             if !u.is_bot.unwrap() && !u.deleted.unwrap() {
                 user_info.push((u.id.as_ref().unwrap(), u.name.as_ref().unwrap(), ""));
+                self.users_cache.insert(
+                    u.id.as_ref().unwrap().to_string(),
+                    u.name.as_ref().unwrap().to_string(),
+                );
             }
         }
         db::insert_pubkeys(&user_info).unwrap();
@@ -152,12 +158,14 @@ pub fn init(server_base_url: &str) {
     info!("Starting Slack RTM client...");
     let api_key: String = util::get_env_var("BOTUSER_AUTH_ACCESS_TOKEN", "");
     let botuser_name: String = util::get_env_var("BOTUSER_REAL_NAME", "Slackrypt");
+    let hash_map = HashMap::new();
     let mut slack_handler = SlackHandler {
         server_base_url: server_base_url.to_string(),
         direct_msg_prefix: 'D',
         user_id: "unknown".to_string(),
         real_name: botuser_name,
         reply_pattern: "unknown".to_string(),
+        users_cache: hash_map,
     };
     let r = RtmClient::login_and_run(&api_key, &mut slack_handler);
     match r {
