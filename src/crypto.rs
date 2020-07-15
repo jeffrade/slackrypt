@@ -14,21 +14,21 @@ use crate::util;
 pub fn slackrypt(plaintext: &[u8], public_key: &RSAPublicKey) -> String {
     let key: [u8; 16] = generate_random_hex_16();
     let cipher_vec_key: Vec<u8> = encrypt_data_asym(&key, public_key);
-    let key_hex: String = util::to_hexadecimal_str(&cipher_vec_key);
+    let key_b64: String = util::to_base64_str(&cipher_vec_key);
     let iv: [u8; 16] = generate_random_hex_16();
     let ciphertext: Vec<u8> = encrypt_data_sym(&key, &iv, &plaintext);
-    let ciphertext_hex: String = util::to_hexadecimal_str(&ciphertext);
+    let ciphertext_b64: String = util::to_base64_str(&ciphertext);
 
     let begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
-    let version_header: String = String::from("Version: Slackrypt 0.1");
+    let version_header: String = String::from("Version: Slackrypt 0.2");
     let end_header: String = String::from("-----END SLACKRYPT MESSAGE-----");
 
     io::build_armor_message(
         &begin_header,
         &end_header,
         &version_header,
-        &ciphertext_hex,
-        &key_hex,
+        &ciphertext_b64,
+        &key_b64,
         &iv,
     )
 }
@@ -40,11 +40,11 @@ pub fn unslackrypt(armor: &str) -> String {
 
 pub fn unslackrypt_with_key(armor: &str, private_key: &RSAPrivateKey) -> String {
     let file_lines: Vec<&str> = armor.split('\n').collect();
-    let ciphertext_hex_line: &str = file_lines[3];
-    let ciphertext: Vec<u8> = util::from_hexadecimal_str(&ciphertext_hex_line);
-    let key_hex_line: &str = file_lines[4];
-    let key_hex_decoded_line: Vec<u8> = util::from_hexadecimal_str(&key_hex_line);
-    let key: Vec<u8> = decrypt_data_asym(&key_hex_decoded_line, &private_key);
+    let ciphertext_b64_line: &str = file_lines[3];
+    let ciphertext: Vec<u8> = util::from_base64_str(&ciphertext_b64_line);
+    let key_b64_line: &str = file_lines[4];
+    let key_b64_decoded_line: Vec<u8> = util::from_base64_str(&key_b64_line);
+    let key: Vec<u8> = decrypt_data_asym(&key_b64_decoded_line, &private_key);
     let iv_line: &str = file_lines[5];
     let iv = iv_line.as_bytes().to_vec();
     let byte_vec: Vec<u8> = decrypt_sym(&key, &iv, &ciphertext);
@@ -169,14 +169,14 @@ mod tests {
         let armor_msg: String = slackrypt("Hello World!".as_bytes(), &public_key);
         let file_lines: Vec<&str> = armor_msg.split('\n').collect();
         assert_eq!("-----BEGIN SLACKRYPT MESSAGE-----", file_lines[0]);
-        assert_eq!("Version: Slackrypt 0.1", file_lines[1]);
+        assert_eq!("Version: Slackrypt 0.2", file_lines[1]);
         assert_eq!("", file_lines[2]);
         assert_eq!("-----END SLACKRYPT MESSAGE-----", file_lines[6]);
 
-        let ciphertext_hex_line: &str = file_lines[3];
-        let ciphertext: Vec<u8> = util::from_hexadecimal_str(&ciphertext_hex_line);
-        let key_hex_line: &str = file_lines[4];
-        let encrypted_key: Vec<u8> = util::from_hexadecimal_str(&key_hex_line);
+        let ciphertext_b64_line: &str = file_lines[3];
+        let ciphertext: Vec<u8> = util::from_base64_str(&ciphertext_b64_line);
+        let key_b64_line: &str = file_lines[4];
+        let encrypted_key: Vec<u8> = util::from_base64_str(&key_b64_line);
         let key: Vec<u8> = decrypt_data_asym(&encrypted_key, &private_key);
         let iv_line: &str = file_lines[5];
 
@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     pub fn test_unslackrypt() {
-        let armor_msg = "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.1\n\n5c5d6d192aec965914f1c2ad7380a6c3\n4b7282437d51b745e43a38e90c5b7b3f044ad5d4fc90bc6b666153be69a532bb3dd7a59301494cc487ab78188922326fadcdd986cb21ee98e96181ad1c9214888f06ac6c73d8a5cbab154836f108297884dabdcc048823898f1b045e3bd3e13e94b607431f6267073ac852ae9335aed3f5a12bdd71b6e3f30427553459651e8e93c30e53136480229f2dc8189019b06f5dfec610181101cdb72856c479fa132ce8cd5950defc8c7af3fc8fe7806a5b10538a42792734bce9dc48bcb6d2802d21fb3c95e199fc9b57d734e3f3359576caf23309eea8761938b3becd0ec1a9ee17a2a7e29db843f23b8f3d99d6653beeddb9d91443c683bca58a41aa12b929b2eb\n1e357ddda8d80d7f\n-----END SLACKRYPT MESSAGE-----";
+        let armor_msg = "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.2\n\nqced0TL5q+J+jFw49HdLIw==\nN9QdbB+d5QYgCYCk4OB8aHBP0aMnWUEsngRAKbinUUNIDYBZ/32Xt6ViSlHPhE1wuC005IdigbESJ2bo4i/GRLlOW1Ime5Kihjwuni9u8RvhSqZWgbj45niZzqCWQrUsXNjwo8hpsiy+7erThhe23t7arRmEfCxdXXxwxnOLQAN9fKGW1d5oZApysO4jI1TU5xjTsj4WDU1Y6hfx18ceMTiOX5/iQzdxeLDj/icbYIpj6/1OUx8FaOA0QJrUsJ3S98O7udQJgdvv08W2P2xGSy2t75PTI+SXhw2KszYzq5M1OTlbMX8vmcBtucwpRP+oUGD/y6pGIXtASRjJ1XDeBw==\n481068aa8b045a3e\n-----END SLACKRYPT MESSAGE-----";
         let private_key: RSAPrivateKey = read_private_key().unwrap();
         let plaintext = unslackrypt_with_key(armor_msg, &private_key);
         assert_eq!("Hello World!".as_bytes(), plaintext.as_bytes());

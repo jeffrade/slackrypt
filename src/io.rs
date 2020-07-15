@@ -106,9 +106,9 @@ mod tests {
     #[test]
     fn test_build_armor_message() {
         let begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
-        let version_header: String = String::from("Version: Slackrypt 0.1");
-        let ciphertext_hex: String = "6c3e90e65feba8d1128309849e0df1c3d16821c575dfedddf92a67d788630956d4755c858e95da6e99ec827035144949b5cfd0591e849790b9ebbe08a95c7423".to_string();
-        let key_hex: String = "9989aaf5bb8f433336ad04b510708bef".to_string();
+        let version_header: String = String::from("Version: Slackrypt 0.2");
+        let ciphertext_b64: String = "qced0TL5q+J+jFw49HdLIw==".to_string();
+        let key_b64: String = "Y6gBRPItFubDetqU3fmdWwYQI0Iijr+Zy6IiVESHNT4r+o4DZNdkdDk0YgYXiqwxG07c3wTBpWDX94eriCVEUnJ0WKKmrbPRwI4WpgSb73LwlqlUnNNFS7PnSuCvt7tJ6mJC1QrgO3e2o5j+kiK39ywvwjCQSZsgSIBhJJjuXt5CLKf++r0gpvNYVT9SFGJrslkckdgzszkIMki3QDhSmdDTKGNcaVwDL0w29gIpt1fWQJr7UNxMk6M2hWLHOmXDdNC4Blt6y4ebZxRWH98/mvIAyCFpDlxvVcqILT4tqHJMyNrecNxd2ZzG/p4bScfdEgg2G4d5Lia8ngqmNUhnhw==".to_string();
         let iv: [u8; 16] = [
             101, 50, 51, 100, 55, 101, 53, 101, 99, 99, 52, 49, 48, 57, 48, 0,
         ];
@@ -118,12 +118,12 @@ mod tests {
             &begin_header,
             &end_header,
             &version_header,
-            &ciphertext_hex,
-            &key_hex,
+            &ciphertext_b64,
+            &key_b64,
             &iv,
         );
 
-        let expected = "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.1\n\n6c3e90e65feba8d1128309849e0df1c3d16821c575dfedddf92a67d788630956d4755c858e95da6e99ec827035144949b5cfd0591e849790b9ebbe08a95c7423\n9989aaf5bb8f433336ad04b510708bef\ne23d7e5ecc41090\u{0}\n-----END SLACKRYPT MESSAGE-----";
+        let expected = "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.2\n\nqced0TL5q+J+jFw49HdLIw==\nY6gBRPItFubDetqU3fmdWwYQI0Iijr+Zy6IiVESHNT4r+o4DZNdkdDk0YgYXiqwxG07c3wTBpWDX94eriCVEUnJ0WKKmrbPRwI4WpgSb73LwlqlUnNNFS7PnSuCvt7tJ6mJC1QrgO3e2o5j+kiK39ywvwjCQSZsgSIBhJJjuXt5CLKf++r0gpvNYVT9SFGJrslkckdgzszkIMki3QDhSmdDTKGNcaVwDL0w29gIpt1fWQJr7UNxMk6M2hWLHOmXDdNC4Blt6y4ebZxRWH98/mvIAyCFpDlxvVcqILT4tqHJMyNrecNxd2ZzG/p4bScfdEgg2G4d5Lia8ngqmNUhnhw==\ne23d7e5ecc41090\u{0}\n-----END SLACKRYPT MESSAGE-----";
         assert_eq!(actual, expected);
     }
 
@@ -132,7 +132,7 @@ mod tests {
         let public_key: RSAPublicKey = read_public_key().unwrap();
 
         let begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
-        let version_header: String = String::from("Version: Slackrypt 0.1");
+        let version_header: String = String::from("Version: Slackrypt 0.2");
         let key: [u8; 16] = [
             54, 98, 49, 57, 101, 53, 49, 53, 98, 99, 57, 52, 97, 51, 50, 57,
         ];
@@ -142,9 +142,9 @@ mod tests {
         let ciphertext = [
             169, 199, 157, 209, 50, 249, 171, 226, 126, 140, 92, 56, 244, 119, 75, 35,
         ];
-        let ciphertext_hex: String = util::to_hexadecimal_str(&ciphertext);
+        let ciphertext_b64: String = util::to_base64_str(&ciphertext);
         let cipher_vec_key: Vec<u8> = crypto::encrypt_data_asym(&key, &public_key);
-        let key_hex: String = util::to_hexadecimal_str(&cipher_vec_key);
+        let key_b64: String = util::to_base64_str(&cipher_vec_key);
         let end_header: String = String::from("-----END SLACKRYPT MESSAGE-----");
 
         let file_name: String = util::default_dir() + "/message.test";
@@ -153,8 +153,8 @@ mod tests {
             &begin_header,
             &end_header,
             &version_header,
-            &ciphertext_hex,
-            &key_hex,
+            &ciphertext_b64,
+            &key_b64,
             &iv,
         );
 
@@ -165,10 +165,10 @@ mod tests {
         assert_eq!(&version_header, &version_header_line);
         let blank_line: &str = file_lines[2];
         assert_eq!("", blank_line);
-        let ciphertext_hex_line: &str = file_lines[3];
-        assert_eq!(ciphertext_hex, ciphertext_hex_line);
-        let key_hex_line: &str = file_lines[4];
-        assert_eq!(key_hex, key_hex_line);
+        let ciphertext_b64_line: &str = file_lines[3];
+        assert_eq!(ciphertext_b64, ciphertext_b64_line);
+        let key_b64_line: &str = file_lines[4];
+        assert_eq!(key_b64, key_b64_line);
         let iv_line: &str = file_lines[5];
         assert_eq!(&String::from_utf8_lossy(&iv), iv_line);
 

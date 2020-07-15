@@ -6,17 +6,12 @@ pub fn default_dir() -> String {
     String::from(env!("HOME")) + "/.slackrypt"
 }
 
-pub fn to_hexadecimal_str(vec: &[u8]) -> String {
-    let mut hex: String = String::new();
-    for u_8 in vec {
-        let v_i: String = format!("{:02x}", u_8);
-        hex.push_str(&v_i);
-    }
-    hex
+pub fn to_base64_str(vec: &[u8]) -> String {
+    base64::encode(vec)
 }
 
-pub fn from_hexadecimal_str(s: &str) -> Vec<u8> {
-    hex::decode(s).expect("hex decoding failed!")
+pub fn from_base64_str(s: &str) -> Vec<u8> {
+    base64::decode(s).expect("base64 decoding failed!")
 }
 
 pub fn get_user_input_message() -> Vec<u8> {
@@ -40,13 +35,16 @@ mod tests {
 
     #[test]
     fn test_from_hexadecimal_str() {
-        let actual_result = from_hexadecimal_str("ff2a000102030405");
-        assert_eq!(actual_result, vec![255, 42, 0, 1, 2, 3, 4, 5]);
+        let actual_result = from_base64_str("SGVsbG8gV29ybGQhCg==");
+        assert_eq!(
+            actual_result,
+            vec![72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100, 33, 10]
+        );
     }
 
     #[test]
     fn test_to_hexadecimal_str() {
-        let actual_result = to_hexadecimal_str(&vec![5, 4, 3, 2, 1, 0, 42, 255]);
-        assert_eq!(actual_result, "0504030201002aff");
+        let actual_result = to_base64_str(&vec![5, 4, 3, 2, 1, 0, 42, 255]);
+        assert_eq!(actual_result, "BQQDAgEAKv8=");
     }
 }

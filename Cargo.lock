@@ -363,12 +363,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hex"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
-
-[[package]]
 name = "http"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1105,13 +1099,12 @@ checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
 
 [[package]]
 name = "slackrypt"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aes-soft",
  "base64 0.12.3",
  "block-modes",
  "fltk",
- "hex",
  "log",
  "pem",
  "rand",

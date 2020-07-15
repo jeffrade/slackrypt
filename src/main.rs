@@ -15,7 +15,7 @@ mod util;
 
 fn main() {
     let dir: String = util::default_dir();
-    let version_header: String = String::from("Version: Slackrypt 0.1");
+    let version_header: String = String::from("Version: Slackrypt 0.2");
     init(&dir);
 
     let private_key = io::get_private_key(&dir).unwrap();
@@ -29,14 +29,7 @@ fn main() {
     //Notes on IV: https://security.stackexchange.com/questions/17044/when-using-aes-and-cbc-is-it-necessary-to-keep-the-iv-secret
     let key: [u8; 16] = crypto::generate_random_hex_16();
     let iv: [u8; 16] = crypto::generate_random_hex_16();
-
     let ciphertext: Vec<u8> = crypto::encrypt_data_sym(&key, &iv, &plaintext);
-    let ciphertext_hex: String = util::to_hexadecimal_str(&ciphertext);
-    //TODO Should I then base64 encode ciphertext_hex? https://stackoverflow.com/a/44532957
-    //     Or more easily, just go from Vec<u8> to base64? https://stackoverflow.com/a/58051911
-
-    let ciphertext_decoded: Vec<u8> = util::from_hexadecimal_str(&ciphertext_hex);
-    assert_eq!(ciphertext, ciphertext_decoded);
 
     //key encryption
     let cipher_vec_key: Vec<u8> = crypto::encrypt_data_asym(&key, &public_key);
@@ -51,8 +44,7 @@ fn main() {
     assert_eq!(&de_key_vec, &de_key_vec_openssl);
 
     //ciphertext decryption
-    let decrypted_ciphertext: Vec<u8> =
-        crypto::decrypt_sym(&de_key_vec, &iv.to_vec(), &ciphertext_decoded);
+    let decrypted_ciphertext: Vec<u8> = crypto::decrypt_sym(&de_key_vec, &iv.to_vec(), &ciphertext);
     assert_eq!(decrypted_ciphertext.as_slice(), plaintext.as_slice());
 
     info!("Starting client...");
