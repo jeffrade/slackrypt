@@ -1,5 +1,4 @@
 use fltk::{app::*, button::*, input::*, menu::*, text::*, window::Window};
-use log::debug;
 use rsa::RSAPublicKey;
 
 use crate::crypto;
@@ -163,7 +162,6 @@ async fn get_pubkeys() -> Result<Vec<String>, reqwest::Error> {
         .json()
         .await?;
 
-    debug!("{:#?}", json_resp);
     let resp: String = json_resp.to_string();
     let pubkeys: Vec<String> = serde_json::from_str(&resp).unwrap();
     Ok(pubkeys)
