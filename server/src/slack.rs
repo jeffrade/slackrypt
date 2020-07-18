@@ -58,10 +58,11 @@ impl slack::EventHandler for SlackHandler {
 
         // listen for commands
         if (&event_text == "init" || &event_text == "help") && self.is_direct_msg(&channel_id) {
-            let response = "Copy and run this in your terminal:\n`echo \"server_base_url=http://"
-                .to_string()
-                + &self.server_base_url
-                + "\" >> ~/.slackrypt/slackrypt.properties`\n\nAfter that is done, please paste your public key found at `~/.slackrypt/key.pem.pub`";
+            let mut response: String = format!(
+                "Run this in your terminal: `curl -sSf http://{}/init.sh | sh`",
+                &self.server_base_url
+            );
+            response.push_str("\n\nAfter that is done, please paste your public key found at `~/.slackrypt/key.pem.pub`");
             let _ = cli.sender().send_message(&channel_id, &response);
         }
 
@@ -146,10 +147,8 @@ impl slack::EventHandler for SlackHandler {
         self.reply_pattern = "<@".to_string() + &this_bot_user_id + "> ";
 
         // Send connected message to channel
-        let connection_msg: String = format!(
-            "I'm up! You can connect to me at {} or DM with 'init'.",
-            &self.server_base_url
-        );
+        let connection_msg: String =
+            String::from("I'm up! Simply DM me with 'init' to get started.");
         let _ = cli.sender().send_message(&channel_id, &connection_msg);
     }
 }

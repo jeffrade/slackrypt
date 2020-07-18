@@ -6,6 +6,7 @@ use log::{debug, info};
 use serde::{Deserialize, Serialize};
 
 use crate::db;
+use crate::util;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct User {
@@ -23,8 +24,9 @@ pub fn start_server(server: String, tx: mpsc::Sender<Server>) -> std::io::Result
         App::new()
             .wrap(middleware::Logger::default())
             .service(web::resource("/pubkey/users").route(web::get().to(pubkey_users)))
+            .service(web::resource("/init.sh").route(web::get().to(init_user)))
     })
-    .bind(server)?
+    .bind(&server)?
     .run();
 
     // send server controller to main thread
@@ -39,4 +41,14 @@ async fn pubkey_users() -> HttpResponse {
     debug!("pubkey_users() entering...");
     let users: Vec<String> = db::get_users_all().unwrap();
     HttpResponse::Ok().json(users)
+}
+
+// curl -H "Content-Type: text/plain" http://127.0.0.1:8080/init.sh
+async fn init_user() -> HttpResponse {
+    debug!("init_user() entering...");
+    let server_base_url: String = util::get_env_var("SLACKRYPT_BASE_URL", "127.0.0.1:8080");
+    let response: String = util::get_init_sh_cmd(format!("http://{}", &server_base_url).as_str());
+    HttpResponse::Ok()
+        .content_type("text/plain")
+        .body(&response)
 }
