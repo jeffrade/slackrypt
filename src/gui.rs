@@ -26,7 +26,8 @@ pub fn init(window_label: &str) {
 
     //Inputs
     let plaintext_in = Input::new(padding, 40 + padding, window_width - 2 * padding, 40, "");
-    let armored_in = Input::new(padding, 340 + padding, window_width - 2 * padding, 150, "");
+    let armored_in =
+        MultilineInput::new(padding, 340 + padding, window_width - 2 * padding, 150, "");
 
     //Outputs
     let mut armored_out = TextDisplay::new(

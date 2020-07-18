@@ -45,7 +45,7 @@ pub fn unslackrypt_with_key(armor: &str, private_key: &RSAPrivateKey) -> String 
     let key_b64_line: &str = file_lines[4];
     let key_b64_decoded_line: Vec<u8> = util::from_base64_str(&key_b64_line);
     let key: Vec<u8> = decrypt_data_asym(&key_b64_decoded_line, &private_key);
-    let iv_line: &str = file_lines[5];
+    let iv_line: &str = file_lines[5].trim();
     let iv = iv_line.as_bytes().to_vec();
     let byte_vec: Vec<u8> = decrypt_sym(&key, &iv, &ciphertext);
     String::from_utf8_lossy(&byte_vec).to_string()
@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     pub fn test_unslackrypt() {
-        let armor_msg = "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.2\n\nqced0TL5q+J+jFw49HdLIw==\nN9QdbB+d5QYgCYCk4OB8aHBP0aMnWUEsngRAKbinUUNIDYBZ/32Xt6ViSlHPhE1wuC005IdigbESJ2bo4i/GRLlOW1Ime5Kihjwuni9u8RvhSqZWgbj45niZzqCWQrUsXNjwo8hpsiy+7erThhe23t7arRmEfCxdXXxwxnOLQAN9fKGW1d5oZApysO4jI1TU5xjTsj4WDU1Y6hfx18ceMTiOX5/iQzdxeLDj/icbYIpj6/1OUx8FaOA0QJrUsJ3S98O7udQJgdvv08W2P2xGSy2t75PTI+SXhw2KszYzq5M1OTlbMX8vmcBtucwpRP+oUGD/y6pGIXtASRjJ1XDeBw==\n481068aa8b045a3e\n-----END SLACKRYPT MESSAGE-----";
+        let armor_msg = "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.2\n\nqced0TL5q+J+jFw49HdLIw== \nN9QdbB+d5QYgCYCk4OB8aHBP0aMnWUEsngRAKbinUUNIDYBZ/32Xt6ViSlHPhE1wuC005IdigbESJ2bo4i/GRLlOW1Ime5Kihjwuni9u8RvhSqZWgbj45niZzqCWQrUsXNjwo8hpsiy+7erThhe23t7arRmEfCxdXXxwxnOLQAN9fKGW1d5oZApysO4jI1TU5xjTsj4WDU1Y6hfx18ceMTiOX5/iQzdxeLDj/icbYIpj6/1OUx8FaOA0QJrUsJ3S98O7udQJgdvv08W2P2xGSy2t75PTI+SXhw2KszYzq5M1OTlbMX8vmcBtucwpRP+oUGD/y6pGIXtASRjJ1XDeBw== \n481068aa8b045a3e \n-----END SLACKRYPT MESSAGE-----";
         let private_key: RSAPrivateKey = read_private_key().unwrap();
         let plaintext = unslackrypt_with_key(armor_msg, &private_key);
         assert_eq!("Hello World!".as_bytes(), plaintext.as_bytes());
