@@ -1,4 +1,5 @@
 use fltk::{app::*, button::*, input::*, menu::*, text::*, window::Window};
+use log::debug;
 use rsa::RSAPublicKey;
 
 use crate::crypto;
@@ -15,9 +16,14 @@ pub enum Message {
 
 // https://github.com/MoAlyousef/fltk-rs/blob/master/src/prelude.rs#L63
 pub fn init(window_label: &str) {
+    let users = io::read_users_file();
+    debug!("Loaded users: {:?}", &users);
+
     let window_width = 800;
     let window_height = 600;
     let padding = 10;
+    let users_display_width = 250;
+    let armored_out_width = window_width - users_display_width;
     let app = App::default();
     let mut window = Window::default()
         .with_size(window_width, window_height)
@@ -27,23 +33,13 @@ pub fn init(window_label: &str) {
     //Inputs
     let plaintext_in = Input::new(padding, 40 + padding, window_width - 2 * padding, 40, "");
     let armored_in =
-        MultilineInput::new(padding, 340 + padding, window_width - 2 * padding, 150, "");
+        MultilineInput::new(padding, 320 + padding, window_width - 2 * padding, 150, "");
 
     //Outputs
-    let mut armored_out = TextDisplay::new(
-        padding,
-        100,
-        window_width - 2 * padding,
-        150,
-        TextBuffer::default(),
-    );
-    let mut plaintext_out = TextDisplay::new(
-        padding,
-        510,
-        window_width - 2 * padding,
-        40,
-        TextBuffer::default(),
-    );
+    let mut armored_out = build_text_display(padding, 100, armored_out_width - 2 * padding, 150);
+    let mut users_out =
+        build_text_display(armored_out_width, 100, users_display_width - padding, 150);
+    let mut plaintext_out = build_text_display(padding, 490, window_width - 2 * padding, 40);
 
     //Buttons
     let button_width = 70;
@@ -56,7 +52,7 @@ pub fn init(window_label: &str) {
     );
     let mut decrypt_button = Button::new(
         window_width / 2 - button_width / 2,
-        550 + padding,
+        530 + padding,
         70,
         30,
         "Decrypt",
@@ -67,27 +63,7 @@ pub fn init(window_label: &str) {
 
     //Menu
     let mut menu = MenuBar::new(0, 0, window_width, 40, "");
-
-    menu.add(
-        "File/New Public Key",
-        Shortcut::None,
-        MenuFlag::Normal,
-        Box::new(move || s.send(Message::New)),
-    );
-
-    menu.add(
-        "File/Download Public Keys",
-        Shortcut::None,
-        MenuFlag::Normal,
-        Box::new(move || s.send(Message::Users)),
-    );
-
-    menu.add(
-        "File/Quit",
-        Shortcut::None,
-        MenuFlag::Normal,
-        Box::new(move || s.send(Message::Quit)),
-    );
+    init_menu(&mut menu, s);
 
     //Event handling must be done after the drawing is done and the main `window` shown. And must be done in the main thread.
     window.make_resizable(true);
@@ -135,6 +111,33 @@ pub fn init(window_label: &str) {
 
     //Run
     app.run().unwrap();
+}
+
+fn build_text_display(x: i32, y: i32, w: i32, h: i32) -> TextDisplay {
+    TextDisplay::new(x, y, w, h, TextBuffer::default())
+}
+
+fn init_menu(menu: &mut MenuBar, s: Sender<Message>) {
+    menu.add(
+        "File/New Public Key",
+        Shortcut::None,
+        MenuFlag::Normal,
+        Box::new(move || s.send(Message::New)),
+    );
+
+    menu.add(
+        "File/Download Public Keys",
+        Shortcut::None,
+        MenuFlag::Normal,
+        Box::new(move || s.send(Message::Users)),
+    );
+
+    menu.add(
+        "File/Quit",
+        Shortcut::None,
+        MenuFlag::Normal,
+        Box::new(move || s.send(Message::Quit)),
+    );
 }
 
 fn encrypt_text(plaintext: &str) -> String {

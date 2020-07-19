@@ -65,9 +65,6 @@ fn init(dir: &str) {
     let props = prop::get_properties();
     info!("Loaded properties: {:?}", &props.unwrap());
 
-    let users = io::read_users_file();
-    info!("Loaded users: {:?}", &users);
-
     let key_file = String::from(dir) + "/key.pem";
     if !util::keys_exist(&key_file) {
         let bits_str = String::from(env!("SCRYPT_KEY_SIZE")); //Set this to min of 2048
