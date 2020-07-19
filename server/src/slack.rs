@@ -67,7 +67,10 @@ impl slack::EventHandler for SlackHandler {
         }
 
         if self.is_public_key(&event_text.trim(), &channel_id) {
-            let user_name: String = self.users_cache.get(&sender).unwrap().to_string();
+            let user_name: String = self.users_cache.get(&sender).unwrap().to_string(); //FIXME Error when new user
+                                                                                        // thread 'main' panicked at 'called `Option::unwrap()` on a `None` value', src/slack.rs:70:37
+                                                                                        // Just check in the cache first, then manually add (i.e. when new user joins Slack workspace after launch)
+
             let _ = db::upsert_pubkey(&sender, &user_name, event_text.trim()).unwrap();
             let response: String =
                 format!("Thank you. If you're curious, your Slack id is {}", &sender);

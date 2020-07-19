@@ -75,7 +75,7 @@ pub fn select_pubkey(user_id: &str) -> Result<Vec<String>> {
 
 pub fn get_users_all() -> Result<Vec<String>> {
     let conn: Connection = get_connection().unwrap();
-    let mut stmt = conn.prepare("SELECT user_id, name, pubkey FROM users")?;
+    let mut stmt = conn.prepare("SELECT user_id, name, pubkey FROM users ORDER BY name")?;
     let mut rows = stmt.query(NO_PARAMS)?;
 
     let mut users = Vec::new();
