@@ -15,9 +15,7 @@ const USERS_FILE_NAME: &str = "/slackrypt.users";
 
 pub fn get_public_key(dir: &str) -> Result<RSAPublicKey> {
     let file_content: String = get_public_key_string(dir).unwrap();
-    let pem_encoded = pem::parse(&file_content).expect("failed to parse pem file");
-    let public_key = RSAPublicKey::try_from(pem_encoded).expect("failed to parse key");
-    Ok(public_key)
+    parse_public_key(&file_content)
 }
 
 pub fn get_public_key_string(dir: &str) -> Result<String> {
@@ -26,6 +24,12 @@ pub fn get_public_key_string(dir: &str) -> Result<String> {
     let mut file_content = String::new();
     file.read_to_string(&mut file_content)?;
     Ok(file_content)
+}
+
+pub fn parse_public_key(pub_key: &str) -> Result<RSAPublicKey> {
+    let pem_encoded = pem::parse(pub_key).expect("failed to parse pem file");
+    let public_key = RSAPublicKey::try_from(pem_encoded).expect("failed to parse key");
+    Ok(public_key)
 }
 
 pub fn get_private_key_default() -> Result<RSAPrivateKey> {

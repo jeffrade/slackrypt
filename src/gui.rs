@@ -1,6 +1,7 @@
-use fltk::{app::*, button::*, input::*, menu::*, text::*, window::Window};
+use fltk::{app::*, button::*, input::*, menu::*, text::*, tree::*, window::Window};
 use log::debug;
 use rsa::RSAPublicKey;
+use std::collections::HashMap;
 
 use crate::crypto;
 use crate::io;
@@ -16,7 +17,7 @@ pub enum Message {
 
 // https://github.com/MoAlyousef/fltk-rs/blob/master/src/prelude.rs#L63
 pub fn init(window_label: &str) {
-    let users = io::read_users_file();
+    let users: HashMap<String, (String, String)> = io::read_users_file();
     debug!("Loaded users: {:?}", &users);
 
     let window_width = 800;
@@ -37,8 +38,13 @@ pub fn init(window_label: &str) {
 
     //Outputs
     let mut armored_out = build_text_display(padding, 100, armored_out_width - 2 * padding, 150);
-    let mut users_out =
-        build_text_display(armored_out_width, 100, users_display_width - padding, 150);
+    let mut users_tree = build_users_tree_select(
+        armored_out_width,
+        100,
+        users_display_width - padding,
+        150,
+        &users,
+    );
     let mut plaintext_out = build_text_display(padding, 490, window_width - 2 * padding, 40);
 
     //Buttons
@@ -72,8 +78,27 @@ pub fn init(window_label: &str) {
 
     //Button events
     encrypt_button.set_callback(Box::new(move || {
+        let user_name: String = match users_tree.get_selected_items() {
+            Some(tree_users) => {
+                let user_name: String = tree_users.as_slice()[0].label().unwrap();
+                debug!("user {} was selected", &user_name);
+                user_name
+            }
+            None => {
+                debug!("No user was selected");
+                "".to_string()
+            }
+        };
+
+        let mut user_id: String = String::new();
+        let mut pub_key: String = String::new();
+        if let Some((id, key)) = users.get(&user_name) {
+            user_id.push_str(id);
+            pub_key.push_str(key);
+        }
+
         let input: String = plaintext_in.value();
-        let result: String = encrypt_text(&input);
+        let result: String = encrypt_text(&input, &user_id, &pub_key);
         armored_out.set_buffer(TextBuffer::default());
         armored_out.buffer().append(&result);
     }));
@@ -117,6 +142,24 @@ fn build_text_display(x: i32, y: i32, w: i32, h: i32) -> TextDisplay {
     TextDisplay::new(x, y, w, h, TextBuffer::default())
 }
 
+fn build_users_tree_select(
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    users: &HashMap<String, (String, String)>,
+) -> Tree {
+    let mut tree = Tree::new(x, y, w, h, "");
+    tree.set_select_mode(TreeSelect::Single);
+    tree.set_root_label("Slack Users");
+
+    for name in users.keys() {
+        tree.add(&name);
+    }
+
+    tree
+}
+
 fn init_menu(menu: &mut MenuBar, s: Sender<Message>) {
     menu.add(
         "File/New Public Key",
@@ -140,9 +183,14 @@ fn init_menu(menu: &mut MenuBar, s: Sender<Message>) {
     );
 }
 
-fn encrypt_text(plaintext: &str) -> String {
+fn encrypt_text(plaintext: &str, user_id: &str, pub_key: &str) -> String {
     let dir = util::default_dir();
-    let public_key: RSAPublicKey = io::get_public_key(&dir).unwrap();
+
+    let public_key: RSAPublicKey = match user_id {
+        "" => io::get_public_key(&dir).unwrap(),
+        _user_id => io::parse_public_key(pub_key).unwrap(),
+    };
+
     crypto::slackrypt(plaintext.as_bytes(), &public_key)
 }
 
