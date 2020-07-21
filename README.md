@@ -19,7 +19,6 @@ $ sudo apt-get install libx11-dev libxext-dev libxft-dev libxinerama-dev libxcur
 
 ## Build
 ```
-$ source .env
 $ cargo build
 ```
 

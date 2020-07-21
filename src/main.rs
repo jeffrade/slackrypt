@@ -1,6 +1,5 @@
 use std::convert::From;
 use std::convert::Into;
-use std::env;
 use std::fs;
 use std::vec::Vec;
 
@@ -67,7 +66,7 @@ fn init(dir: &str) {
 
     let key_file = String::from(dir) + "/key.pem";
     if !util::keys_exist(&key_file) {
-        let bits_str = String::from(env!("SCRYPT_KEY_SIZE")); //Set this to min of 2048
+        let bits_str: String = util::get_env_var("SCRYPT_KEY_SIZE", "2048");
         let bits: i32 = bits_str.parse::<i32>().unwrap();
         crypto::create_keys_asym(bits, &key_file);
     }

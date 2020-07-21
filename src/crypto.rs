@@ -134,8 +134,6 @@ pub fn openssl_generate(file_name: &str, bits: i32) {
 }
 
 pub fn create_keys_asym(bits: i32, key_file: &str) {
-    // let bits_str = String::from(env!("SCRYPT_KEY_SIZE")); //Set this to min of 2048
-    // let bits: i32 = bits_str.parse::<i32>().unwrap();
     info!("Creating {} bit keys, this may take a while...", bits);
 
     // Using openssl since RustCrypto/RSA cannot export keys in PEM.
