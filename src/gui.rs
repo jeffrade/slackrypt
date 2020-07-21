@@ -95,10 +95,12 @@ pub fn init(window_label: &str) {
         if let Some((id, key)) = users.get(&user_name) {
             user_id.push_str(id);
             pub_key.push_str(key);
+        } else {
+            user_id.push_str("self");
         }
 
         let input: String = plaintext_in.value();
-        let result: String = encrypt_text(&input, &user_id, &pub_key);
+        let result: String = encrypt_text(&input, &pub_key, &user_id);
         armored_out.set_buffer(TextBuffer::default());
         armored_out.buffer().append(&result);
     }));
@@ -183,15 +185,15 @@ fn init_menu(menu: &mut MenuBar, s: Sender<Message>) {
     );
 }
 
-fn encrypt_text(plaintext: &str, user_id: &str, pub_key: &str) -> String {
+fn encrypt_text(plaintext: &str, pub_key: &str, user_id: &str) -> String {
     let dir = util::default_dir();
 
     let public_key: RSAPublicKey = match user_id {
-        "" => io::get_public_key(&dir).unwrap(),
+        "self" => io::get_public_key(&dir).unwrap(),
         _user_id => io::parse_public_key(pub_key).unwrap(),
     };
 
-    crypto::slackrypt(plaintext.as_bytes(), &public_key)
+    crypto::slackrypt(plaintext.as_bytes(), &public_key, user_id)
 }
 
 fn decrypt_text(armored_msg: &str) -> String {

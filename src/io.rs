@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -53,24 +52,12 @@ pub fn load_contents_from_file(file_name: &str) -> Result<String> {
     Ok(file_content)
 }
 
-pub fn write_message_to_file(
-    file_name: &str,
-    begin_head: &str,
-    end_head: &str,
-    ver_head: &str,
-    cipher: &str,
-    key: &str,
-    iv: &[u8],
-) {
-    let data: String = build_armor_message(begin_head, end_head, ver_head, cipher, key, iv);
-    fs::write(file_name, data).expect("Unable to write encrypted message!");
-}
-
 //A psuedo ASCII Armor format https://tools.ietf.org/html/rfc4880#section-6.2
 pub fn build_armor_message(
     begin_head: &str,
     end_head: &str,
     ver_head: &str,
+    user_id: &str,
     cipher: &str,
     key: &str,
     iv: &[u8],
@@ -80,6 +67,7 @@ pub fn build_armor_message(
     data.push_str("\n");
     data.push_str(ver_head);
     data.push_str("\n");
+    data.push_str(user_id);
     data.push_str("\n");
     data.push_str(cipher);
     data.push_str("\n");
@@ -141,6 +129,7 @@ mod tests {
     fn test_build_armor_message() {
         let begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
         let version_header: String = String::from("Version: Slackrypt 0.2");
+        let user_id: String = String::from("U1234ABC");
         let ciphertext_b64: String = "qced0TL5q+J+jFw49HdLIw==".to_string();
         let key_b64: String = "Y6gBRPItFubDetqU3fmdWwYQI0Iijr+Zy6IiVESHNT4r+o4DZNdkdDk0YgYXiqwxG07c3wTBpWDX94eriCVEUnJ0WKKmrbPRwI4WpgSb73LwlqlUnNNFS7PnSuCvt7tJ6mJC1QrgO3e2o5j+kiK39ywvwjCQSZsgSIBhJJjuXt5CLKf++r0gpvNYVT9SFGJrslkckdgzszkIMki3QDhSmdDTKGNcaVwDL0w29gIpt1fWQJr7UNxMk6M2hWLHOmXDdNC4Blt6y4ebZxRWH98/mvIAyCFpDlxvVcqILT4tqHJMyNrecNxd2ZzG/p4bScfdEgg2G4d5Lia8ngqmNUhnhw==".to_string();
         let iv: [u8; 16] = [
@@ -152,12 +141,13 @@ mod tests {
             &begin_header,
             &end_header,
             &version_header,
+            &user_id,
             &ciphertext_b64,
             &key_b64,
             &iv,
         );
 
-        let expected = "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.2\n\nqced0TL5q+J+jFw49HdLIw==\nY6gBRPItFubDetqU3fmdWwYQI0Iijr+Zy6IiVESHNT4r+o4DZNdkdDk0YgYXiqwxG07c3wTBpWDX94eriCVEUnJ0WKKmrbPRwI4WpgSb73LwlqlUnNNFS7PnSuCvt7tJ6mJC1QrgO3e2o5j+kiK39ywvwjCQSZsgSIBhJJjuXt5CLKf++r0gpvNYVT9SFGJrslkckdgzszkIMki3QDhSmdDTKGNcaVwDL0w29gIpt1fWQJr7UNxMk6M2hWLHOmXDdNC4Blt6y4ebZxRWH98/mvIAyCFpDlxvVcqILT4tqHJMyNrecNxd2ZzG/p4bScfdEgg2G4d5Lia8ngqmNUhnhw==\ne23d7e5ecc41090\u{0}\n-----END SLACKRYPT MESSAGE-----";
+        let expected = "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.2\nU1234ABC\nqced0TL5q+J+jFw49HdLIw==\nY6gBRPItFubDetqU3fmdWwYQI0Iijr+Zy6IiVESHNT4r+o4DZNdkdDk0YgYXiqwxG07c3wTBpWDX94eriCVEUnJ0WKKmrbPRwI4WpgSb73LwlqlUnNNFS7PnSuCvt7tJ6mJC1QrgO3e2o5j+kiK39ywvwjCQSZsgSIBhJJjuXt5CLKf++r0gpvNYVT9SFGJrslkckdgzszkIMki3QDhSmdDTKGNcaVwDL0w29gIpt1fWQJr7UNxMk6M2hWLHOmXDdNC4Blt6y4ebZxRWH98/mvIAyCFpDlxvVcqILT4tqHJMyNrecNxd2ZzG/p4bScfdEgg2G4d5Lia8ngqmNUhnhw==\ne23d7e5ecc41090\u{0}\n-----END SLACKRYPT MESSAGE-----";
         assert_eq!(actual, expected);
     }
 
@@ -167,6 +157,7 @@ mod tests {
 
         let begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
         let version_header: String = String::from("Version: Slackrypt 0.2");
+        let user_id: String = String::from("U1234ABC");
         let key: [u8; 16] = [
             54, 98, 49, 57, 101, 53, 49, 53, 98, 99, 57, 52, 97, 51, 50, 57,
         ];
@@ -182,23 +173,25 @@ mod tests {
         let end_header: String = String::from("-----END SLACKRYPT MESSAGE-----");
 
         let file_name: String = util::default_dir() + "/message.test";
-        write_message_to_file(
-            &file_name,
+
+        let data = build_armor_message(
             &begin_header,
             &end_header,
             &version_header,
+            &user_id,
             &ciphertext_b64,
             &key_b64,
             &iv,
         );
+        std::fs::write(&file_name, data).expect("Unable to write encrypted message!");
 
         //Read encrypted message from the file
         let file_contents: String = load_contents_from_file(&file_name).unwrap();
         let file_lines: Vec<&str> = file_contents.split('\n').collect();
         let version_header_line: &str = file_lines[1];
         assert_eq!(&version_header, &version_header_line);
-        let blank_line: &str = file_lines[2];
-        assert_eq!("", blank_line);
+        let user_id: &str = file_lines[2];
+        assert_eq!("U1234ABC", user_id);
         let ciphertext_b64_line: &str = file_lines[3];
         assert_eq!(ciphertext_b64, ciphertext_b64_line);
         let key_b64_line: &str = file_lines[4];
@@ -206,7 +199,7 @@ mod tests {
         let iv_line: &str = file_lines[5];
         assert_eq!(&String::from_utf8_lossy(&iv), iv_line);
 
-        fs::remove_file(&file_name).expect("message.test not found or permission denied");
+        std::fs::remove_file(&file_name).expect("message.test not found or permission denied");
     }
 
     fn read_public_key() -> Result<RSAPublicKey> {

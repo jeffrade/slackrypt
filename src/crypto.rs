@@ -11,7 +11,7 @@ use rsa::{PaddingScheme, PublicKey, RSAPrivateKey, RSAPublicKey};
 use crate::io;
 use crate::util;
 
-pub fn slackrypt(plaintext: &[u8], public_key: &RSAPublicKey) -> String {
+pub fn slackrypt(plaintext: &[u8], public_key: &RSAPublicKey, user_id: &str) -> String {
     let key: [u8; 16] = generate_random_hex_16();
     let cipher_vec_key: Vec<u8> = encrypt_data_asym(&key, public_key);
     let key_b64: String = util::to_base64_str(&cipher_vec_key);
@@ -27,6 +27,7 @@ pub fn slackrypt(plaintext: &[u8], public_key: &RSAPublicKey) -> String {
         &begin_header,
         &end_header,
         &version_header,
+        user_id,
         &ciphertext_b64,
         &key_b64,
         &iv,
@@ -166,11 +167,12 @@ mod tests {
     fn test_slackrypt() {
         let private_key: RSAPrivateKey = read_private_key().unwrap();
         let public_key: RSAPublicKey = read_public_key().unwrap();
-        let armor_msg: String = slackrypt("Hello World!".as_bytes(), &public_key);
+        let user_id: &str = "U1234ABC";
+        let armor_msg: String = slackrypt("Hello World!".as_bytes(), &public_key, user_id);
         let file_lines: Vec<&str> = armor_msg.split('\n').collect();
         assert_eq!("-----BEGIN SLACKRYPT MESSAGE-----", file_lines[0]);
         assert_eq!("Version: Slackrypt 0.2", file_lines[1]);
-        assert_eq!("", file_lines[2]);
+        assert_eq!("U1234ABC", file_lines[2]);
         assert_eq!("-----END SLACKRYPT MESSAGE-----", file_lines[6]);
 
         let ciphertext_b64_line: &str = file_lines[3];
