@@ -2,7 +2,7 @@
 
 _Disclaimer: This project has not been audited and not recommended for production environments._
 
-<img src="https://github.com/jeffrade/slackrypt/blob/master/slackrypt.jpg" alt="logo" width="128" height="128">
+<img src="https://github.com/jeffrade/slackrypt/blob/master/images/slackrypt.jpg" alt="logo" width="128" height="128">
 
 ## Prerequisites
  - A [Slack organization](https://slack.com/get-started).
@@ -41,5 +41,9 @@ $ export RUST_LOG=DEBUG
 # but in a production environment:
 $ export RUST_LOG=WARN
 ```
+
+## Information
+ - Pull Requests and Issues are welcome!
+
 ## Backlog
-#### SERVER
+ - Provide nginx configuration

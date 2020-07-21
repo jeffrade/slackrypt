@@ -2,7 +2,7 @@
 
 _Disclaimer: This project has not been audited and not recommended for production environments._
 
-<img src="https://github.com/jeffrade/slackrypt/blob/master/slackrypt.jpg" alt="logo" width="128" height="128">
+<img src="https://github.com/jeffrade/slackrypt/blob/master/images/slackrypt.jpg" alt="logo" width="128" height="128">
 
 ## Prerequisites
  - You must build from source, so [rustup](https://rustup.rs/).
@@ -24,8 +24,18 @@ $ cargo build
 
 ## Run
 ```
-$ cargo run "Your plaintext message"
+$ cargo run
 ```
+
+## In Action
+
+#### Encrypting...
+
+<img src="https://github.com/jeffrade/slackrypt/blob/master/images/slackrypt-encrypt.gif" alt="encrypt-gif" width="1000">
+
+#### Decrypting...
+
+<img src="https://github.com/jeffrade/slackrypt/blob/master/images/slackrypt-decrypt.gif" alt="decrypt-gif" width="1000">
 
 ## Logging
  - Defaults to `ERROR` when `RUST_LOG` is not set.
@@ -38,6 +48,7 @@ $ export RUST_LOG=WARN
 ```
 
 ## Information
+ - Pull Requests and Issues are welcome!
  - Uses `openssl` for key generation.
  - Uses https://github.com/RustCrypto/RSA for parsing/loading keys, encrypting and decrypting symmetric keys.
  - Uses [aes-soft](https://github.com/RustCrypto/block-ciphers/#supported-algorithms) for symmetric encryption of plaintext.
