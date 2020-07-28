@@ -13,19 +13,28 @@ _Disclaimer: This project has not been audited and not recommended for productio
 ```
 $ sudo apt-get install build-essential
 $ sudo apt-get install cmake
+$ sudo apt-get install libssl-dev
+$ sudo apt-get install pkg-config
 $ sudo apt-get install sqlite3 libsqlite3-dev
 ```
 
 ## Build
 ```
-$ source .env
 $ cargo build
 ```
 
 ## Run
+Export the following (updating values for your installation):
+```
+export SLACK_CHANNEL_NAME=general
+export BOTUSER_AUTH_ACCESS_TOKEN=xoxb-foobar-1234567890
+export SLACKRYPT_BASE_URL=example.com
+```
+then run:
 ```
 $ cargo run
 ```
+The user database will be located at `~/.slackrypt-server/slackrypt.db3`
 
 ## Deploy
 ```
