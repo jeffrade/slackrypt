@@ -15,7 +15,7 @@ struct User {
 }
 
 // Inspiration from https://github.com/actix/examples/blob/e8ab9ee7cab3a17aedbddb4800d56d206d0a296f/run-in-thread/src/main.rs
-pub fn start_server(server: String, tx: mpsc::Sender<Server>) -> std::io::Result<()> {
+pub fn start_server(host_and_port: String, tx: mpsc::Sender<Server>) -> std::io::Result<()> {
     info!("Starting HTTP service...");
     let mut sys = System::new("slackrypt-server");
 
@@ -26,7 +26,7 @@ pub fn start_server(server: String, tx: mpsc::Sender<Server>) -> std::io::Result
             .service(web::resource("/pubkey/users").route(web::get().to(pubkey_users)))
             .service(web::resource("/init.sh").route(web::get().to(init_user)))
     })
-    .bind(&server)?
+    .bind(&host_and_port)?
     .run();
 
     // send server controller to main thread

@@ -24,7 +24,7 @@ $ cargo build
 ```
 
 ## Run
-Export the following (updating values for your installation):
+Export the following (replace values for your installation):
 ```
 export SLACK_CHANNEL_NAME=general
 export BOTUSER_AUTH_ACCESS_TOKEN=xoxb-foobar-1234567890
