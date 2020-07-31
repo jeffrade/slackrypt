@@ -1,0 +1,36 @@
+######################################################################
+### Simple reverse proxy to serve/redirect all requests over https.
+### Use Certbot to get your TLS/SSL certificate if you don't have one.
+### Visit https://certbot.eff.org/ to get started.
+### Change example.com to the name of your host.
+######################################################################
+
+server {
+
+    if ($host = example.com) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80;
+    listen [::]:80;
+
+    server_name example.com;
+    return 404; # managed by Certbot
+}
+
+server {
+
+    server_name example.com;
+
+    location /slackrypt/ {
+        proxy_pass http://localhost:8080/;
+    }
+
+    listen [::]:443 ssl ipv6only=on; # managed by Certbot
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+}

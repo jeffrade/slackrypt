@@ -59,7 +59,7 @@ impl slack::EventHandler for SlackHandler {
         // listen for commands
         if (&event_text == "init" || &event_text == "help") && self.is_direct_msg(&channel_id) {
             let mut response: String = format!(
-                "Run this in your terminal: `curl -sSf http://{}/init.sh | sh`",
+                "Run this in your terminal: `curl -sSf https://{}/init.sh | sh`",
                 &self.server_base_url
             );
             response.push_str("\n\nAfter that is done, please paste your public key found at `~/.slackrypt/key.pem.pub`");

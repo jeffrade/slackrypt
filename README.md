@@ -5,9 +5,9 @@ _Disclaimer: This project has not been audited and not recommended for productio
 <img src="https://github.com/jeffrade/slackrypt/blob/master/images/slackrypt.jpg" alt="logo" width="128" height="128">
 
 ## Prerequisites
- - You must build from source, so [rustup](https://rustup.rs/).
+ - Currently, you must build from source, so [rustup](https://rustup.rs/).
  - Have `openssl` installed (verify with `command -v openssl`).
- - A running [slackrypt-server](https://github.com/jeffrade/slackrypt/tree/master/server) instance to connect to (currently only supports localhost).
+ - A running [slackrypt-server](https://github.com/jeffrade/slackrypt/tree/master/server) hosted over https (see [server/README.md](https://github.com/jeffrade/slackrypt/blob/master/server/README.md) for instructions).
  - On Linux:
 ```
 $ sudo apt-get install build-essential
@@ -54,6 +54,7 @@ $ export RUST_LOG=WARN
  - Uses [aes-soft](https://github.com/RustCrypto/block-ciphers/#supported-algorithms) for symmetric encryption of plaintext.
 
 ## Backlog
+ - Add Mac OSX buld instructions.
  - Implement "New Public Key" in GUI menu.
 #### CRC
  - radix-64 CRC (Cyclic_redundancy_check), in C https://tools.ietf.org/html/rfc4880#section-6.1

@@ -19,7 +19,6 @@ pub fn start_server(host_and_port: String, tx: mpsc::Sender<Server>) -> std::io:
     info!("Starting HTTP service...");
     let mut sys = System::new("slackrypt-server");
 
-    //FIXME Support https https://github.com/actix/examples/tree/master/openssl
     let srv = HttpServer::new(|| {
         App::new()
             .wrap(middleware::Logger::default())
@@ -47,7 +46,7 @@ async fn pubkey_users() -> HttpResponse {
 async fn init_user() -> HttpResponse {
     debug!("init_user() entering...");
     let server_base_url: String = util::get_env_var("SLACKRYPT_BASE_URL", "127.0.0.1:8080");
-    let response: String = util::get_init_sh_cmd(format!("http://{}", &server_base_url).as_str());
+    let response: String = util::get_init_sh_cmd(format!("https://{}", &server_base_url).as_str());
     HttpResponse::Ok()
         .content_type("text/plain")
         .body(&response)
