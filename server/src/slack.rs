@@ -1,8 +1,9 @@
 use log::{debug, info};
 use slack::api::rtm::StartResponse;
 use slack::api::{Channel, Message, MessageStandard, User};
-use slack::{Event, RtmClient};
+use slack::{Error, Event, RtmClient};
 use std::collections::HashMap;
+use std::result::Result;
 use std::vec::Vec;
 
 use crate::db;
@@ -156,7 +157,7 @@ impl slack::EventHandler for SlackHandler {
     }
 }
 
-pub fn init(server_base_url: &str) {
+pub async fn init(server_base_url: &str) {
     info!("Starting Slack RTM client...");
     let api_key: String = util::get_env_var("BOTUSER_AUTH_ACCESS_TOKEN", "");
     let botuser_name: String = util::get_env_var("BOTUSER_REAL_NAME", "Slackrypt");
@@ -169,8 +170,8 @@ pub fn init(server_base_url: &str) {
         reply_pattern: "unknown".to_string(),
         users_cache: hash_map,
     };
-    let r = RtmClient::login_and_run(&api_key, &mut slack_handler);
-    match r {
+    let resp: Result<(), Error> = RtmClient::login_and_run(&api_key, &mut slack_handler);
+    match resp {
         Ok(_) => {}
         Err(err) => panic!("Err: Could not login and start slack client! {}", err),
     }

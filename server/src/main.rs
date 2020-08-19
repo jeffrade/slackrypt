@@ -2,6 +2,7 @@ use std::fs;
 use std::sync::mpsc;
 use std::thread;
 
+use futures::executor::block_on;
 use log::warn;
 
 mod db;
@@ -22,7 +23,8 @@ fn main() {
     });
     let _srv = rx.recv().unwrap();
 
-    slack::init(&server_base_url); //This must be called last
+    let _result = slack::init(&server_base_url);
+    block_on(_result); // https://rust-lang.github.io/async-book/01_getting_started/04_async_await_primer.html
 }
 
 fn init() {
