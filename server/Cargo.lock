@@ -1697,9 +1697,9 @@ checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
 
 [[package]]
 name = "slack"
-version = "0.23.0"
+version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "209deb3fc0f69a0c372fdae697ff33b239af9d7b1ff645282bb3dd909861aab1"
+checksum = "bc8e256ca9eb56907a7535408e6e8664b2052dad758ccdaca180f8fc737bced8"
 dependencies = [
  "log 0.3.9",
  "serde",
@@ -1712,9 +1712,9 @@ dependencies = [
 
 [[package]]
 name = "slack_api"
-version = "0.22.0"
+version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2202e7fdfce3a3c6509ccdb6a95448b4fd2a4c01918c8fb67d8ffe0c7ccc778"
+checksum = "07d3c02beffb13b2ca8f6a946dbdc4ba1c97afecd253d5909dfa9b2631dc5cd4"
 dependencies = [
  "reqwest",
  "serde",
