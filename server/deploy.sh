@@ -37,6 +37,6 @@ cargo build --release
 print_info "Exporting environment vars..."
 export RUST_LOG=INFO
 print_info "Staring slackrypt-server..."
-nohup ./target/release/slackrypt-server &
+nohup ../target/release/slackrypt-server &
 
 print_success "Deployment complete!"

@@ -1,4 +1,4 @@
-use log::{debug, info};
+use log::{debug, error, info};
 use slack::api::rtm::StartResponse;
 use slack::api::{Channel, Message, MessageStandard, User};
 use slack::{Error, Event, RtmClient};
@@ -39,7 +39,10 @@ impl slack::EventHandler for SlackHandler {
         let mut event_text: String = String::new();
         let mut sender: String = String::new();
         let mut channel_id: String = String::new();
-        debug!("\n\n#####################debug event\n{:?}\n\n", event);
+        info!(
+            "\n\n################################# Event\n{:?}\n\n",
+            event
+        );
         match event {
             Event::Message(message) => match *message {
                 Message::Standard(MessageStandard {
@@ -173,6 +176,9 @@ pub async fn init(server_base_url: &str) {
     let resp: Result<(), Error> = RtmClient::login_and_run(&api_key, &mut slack_handler);
     match resp {
         Ok(_) => {}
-        Err(err) => panic!("Err: Could not login and start slack client! {}", err),
+        Err(err) => {
+            error!("Error when attempting to login and run!");
+            panic!("Err: Could not login and start slack client! {}", err)
+        }
     }
 }
