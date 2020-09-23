@@ -40,18 +40,3 @@ The user database will be located at `~/.slackrypt-server/slackrypt.db3`
 ```
 $ bash deploy.sh
 ```
-
-## Logging
- - Defaults to `ERROR` when `RUST_LOG` is not set.
- - You can `export` per environment. E.g.:
-```
-# for local development
-$ export RUST_LOG=DEBUG
-# but in a production environment:
-$ export RUST_LOG=WARN
-```
-
-## Information
- - Pull Requests and Issues are welcome!
-
-## Backlog
