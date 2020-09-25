@@ -6,11 +6,11 @@ _Disclaimer: This project has not been audited and not recommended for productio
 
 ### Client
 
-See [client/README.md](https://github.com/jeffrade/slackrypt/blob/master/client/README.md)
+See [client/README.md](https://github.com/jeffrade/slackrypt/blob/master/client)
 
 ### Server
 
-See [server/README.md](https://github.com/jeffrade/slackrypt/blob/master/server/README.md)
+See [server/README.md](https://github.com/jeffrade/slackrypt/blob/master/server)
 
 ## In Action
 
