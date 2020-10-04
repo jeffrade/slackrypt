@@ -174,7 +174,7 @@ pub async fn init(server_base_url: &str) {
     let botuser_name: String = util::get_env_var("BOTUSER_REAL_NAME", "Slackrypt");
     let hash_map = HashMap::new();
     let mut slack_handler = SlackHandler {
-        api_key: api_key.to_string(),
+        api_key,
         server_base_url: server_base_url.to_string(),
         direct_msg_prefix: 'D',
         user_id: "unknown".to_string(),

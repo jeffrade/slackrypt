@@ -5,6 +5,7 @@ use std::vec::Vec;
 
 use log::{info, warn};
 use rsa::RSAPublicKey;
+use simple_logger::SimpleLogger;
 
 mod crypto;
 mod gui;
@@ -51,7 +52,7 @@ fn main() {
 }
 
 fn init(dir: &str) {
-    simple_logger::init_by_env(); // to set, export RUST_LOG=ERROR|WARN|INFO|DEBUG
+    SimpleLogger::from_env(); // to set, export RUST_LOG=ERROR|WARN|INFO|DEBUG
 
     match fs::create_dir(dir) {
         Ok(_) => true,

@@ -4,6 +4,7 @@ use std::thread;
 
 use futures::executor::block_on;
 use log::warn;
+use simple_logger::SimpleLogger;
 
 mod db;
 mod server;
@@ -11,7 +12,7 @@ mod slack;
 mod util;
 
 fn main() {
-    simple_logger::init_by_env();
+    SimpleLogger::from_env();
     init();
     db::init().unwrap();
 
