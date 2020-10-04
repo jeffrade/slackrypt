@@ -10,6 +10,7 @@ use crate::db;
 use crate::util;
 
 struct SlackHandler {
+    api_key: String,
     server_base_url: String,
     direct_msg_prefix: char,
     user_id: String,
@@ -44,6 +45,9 @@ impl slack::EventHandler for SlackHandler {
             event
         );
         match event {
+            Event::Hello => {
+                info!("################################# Event::Hello");
+            }
             Event::Message(message) => match *message {
                 Message::Standard(MessageStandard {
                     ref text,
@@ -57,6 +61,10 @@ impl slack::EventHandler for SlackHandler {
                 }
                 _ => debug!("Message not decoded, ignore it."),
             },
+            Event::Goodbye => {
+                info!("################################# Event::Goodbye");
+                start(self)
+            }
             _ => debug!("Event not decoded, ignore it."),
         }
 
@@ -161,11 +169,12 @@ impl slack::EventHandler for SlackHandler {
 }
 
 pub async fn init(server_base_url: &str) {
-    info!("Starting Slack RTM client...");
+    info!("Initializing Slack RTM client...");
     let api_key: String = util::get_env_var("BOTUSER_AUTH_ACCESS_TOKEN", "");
     let botuser_name: String = util::get_env_var("BOTUSER_REAL_NAME", "Slackrypt");
     let hash_map = HashMap::new();
     let mut slack_handler = SlackHandler {
+        api_key: api_key.to_string(),
         server_base_url: server_base_url.to_string(),
         direct_msg_prefix: 'D',
         user_id: "unknown".to_string(),
@@ -173,7 +182,13 @@ pub async fn init(server_base_url: &str) {
         reply_pattern: "unknown".to_string(),
         users_cache: hash_map,
     };
-    let resp: Result<(), Error> = RtmClient::login_and_run(&api_key, &mut slack_handler);
+    start(&mut slack_handler)
+}
+
+fn start(slack_handler: &mut SlackHandler) {
+    info!("Starting Slack RTM client...");
+    let resp: Result<(), Error> =
+        RtmClient::login_and_run(&slack_handler.api_key.to_string(), slack_handler);
     match resp {
         Ok(_) => {}
         Err(err) => {
