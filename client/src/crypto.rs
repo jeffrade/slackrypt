@@ -1,3 +1,5 @@
+use std::error::Error;
+use std::fmt::Display;
 use std::process::Command;
 use std::vec::Vec;
 
@@ -11,27 +13,87 @@ use rsa::{PaddingScheme, PublicKey, RSAPrivateKey, RSAPublicKey};
 use crate::io;
 use crate::util;
 
-pub fn slackrypt(plaintext: &[u8], public_key: &RSAPublicKey, user_id: &str) -> String {
+#[derive(Debug)]
+pub struct AsciiArmoredError {}
+
+impl Error for AsciiArmoredError {}
+
+impl Display for AsciiArmoredError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Error trying to build AsciiArmoredMessage: {:?}", self)
+    }
+}
+
+/// A psuedo ASCII Armor format https://tools.ietf.org/html/rfc4880#section-6.2
+#[derive(Debug)]
+pub struct AsciiArmoredMessage {
+    begin_header: &'static str,
+    end_header: &'static str,
+    version_header: &'static str,
+    user_id: String,
+    ciphertext: String,
+    encrypted_key: String,
+    iv: String,
+}
+
+impl AsciiArmoredMessage {
+    pub fn build(
+        plaintext: &[u8],
+        public_key: &RSAPublicKey,
+        key: [u8; 16],
+        user_id: String,
+        iv: [u8; 16],
+    ) -> Result<AsciiArmoredMessage, AsciiArmoredError> {
+        let begin_header: &'static str = "-----BEGIN SLACKRYPT MESSAGE-----";
+        let version_header: &'static str = "Version: Slackrypt 0.2";
+        let end_header: &'static str = "-----END SLACKRYPT MESSAGE-----";
+
+        let ciphertext: Vec<u8> = encrypt_data_sym(&key, &iv, &plaintext);
+        let ciphertext_b64: String = util::to_base64_str(&ciphertext);
+        let encrypted_key: Vec<u8> = encrypt_data_asym(&key, public_key);
+        let encrypted_key_b64: String = util::to_base64_str(&encrypted_key);
+
+        Ok(AsciiArmoredMessage {
+            begin_header,
+            end_header,
+            version_header,
+            user_id,
+            ciphertext: ciphertext_b64,
+            encrypted_key: encrypted_key_b64,
+            iv: String::from_utf8_lossy(&iv).to_string(),
+        })
+    }
+
+    pub fn into_string(self: AsciiArmoredMessage) -> String {
+        let mut data: String = String::new();
+        data.push_str(self.begin_header);
+        data.push_str("\n");
+        data.push_str(self.version_header);
+        data.push_str("\n");
+        data.push_str(&self.user_id);
+        data.push_str("\n");
+        data.push_str(&self.ciphertext);
+        data.push_str("\n");
+        data.push_str(&self.encrypted_key);
+        data.push_str("\n");
+        data.push_str(&self.iv);
+        data.push_str("\n");
+        //TODO the radix-64 CRC (Cyclic_redundancy_check)? =njUN
+        //      -> CRC impl in C https://tools.ietf.org/html/rfc4880#section-6.1
+        data.push_str(self.end_header);
+        data
+    }
+}
+
+pub fn slackrypt(
+    plaintext: &[u8],
+    public_key: &RSAPublicKey,
+    user_id: &str,
+) -> Result<AsciiArmoredMessage, AsciiArmoredError> {
     let key: [u8; 16] = generate_random_hex_16();
-    let cipher_vec_key: Vec<u8> = encrypt_data_asym(&key, public_key);
-    let key_b64: String = util::to_base64_str(&cipher_vec_key);
     let iv: [u8; 16] = generate_random_hex_16();
-    let ciphertext: Vec<u8> = encrypt_data_sym(&key, &iv, &plaintext);
-    let ciphertext_b64: String = util::to_base64_str(&ciphertext);
 
-    let begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
-    let version_header: String = String::from("Version: Slackrypt 0.2");
-    let end_header: String = String::from("-----END SLACKRYPT MESSAGE-----");
-
-    io::build_armor_message(
-        &begin_header,
-        &end_header,
-        &version_header,
-        user_id,
-        &ciphertext_b64,
-        &key_b64,
-        &iv,
-    )
+    AsciiArmoredMessage::build(plaintext, public_key, key, user_id.to_string(), iv)
 }
 
 pub fn unslackrypt(armor: &str) -> String {
@@ -166,7 +228,9 @@ mod tests {
         let private_key: RSAPrivateKey = read_private_key().unwrap();
         let public_key: RSAPublicKey = read_public_key().unwrap();
         let user_id: &str = "U1234ABC";
-        let armor_msg: String = slackrypt("Hello World!".as_bytes(), &public_key, user_id);
+        let armor_msg: String = slackrypt("Hello World!".as_bytes(), &public_key, user_id)
+            .unwrap()
+            .into_string();
         let file_lines: Vec<&str> = armor_msg.split('\n').collect();
         assert_eq!("-----BEGIN SLACKRYPT MESSAGE-----", file_lines[0]);
         assert_eq!("Version: Slackrypt 0.2", file_lines[1]);
@@ -265,6 +329,86 @@ mod tests {
         let hex: [u8; 16] = generate_random_hex_16();
         assert_eq!(hex.len(), 16);
         assert!(hex[15] > 0);
+    }
+
+    #[test]
+    fn test_build_armor_message() {
+        let plaintext: String = "this is a plaintext message to encrypt".to_string();
+        let key: [u8; 16] = [
+            54, 98, 49, 57, 101, 53, 49, 53, 98, 99, 57, 52, 97, 51, 50, 57,
+        ];
+        let user_id: String = String::from("U1234ABC");
+        let iv: [u8; 16] = [
+            52, 56, 49, 48, 54, 56, 97, 97, 56, 98, 48, 52, 53, 97, 51, 101,
+        ];
+
+        let actual = AsciiArmoredMessage::build(
+            plaintext.as_bytes(),
+            &read_public_key().unwrap(),
+            key,
+            user_id,
+            iv,
+        )
+        .unwrap()
+        .into_string();
+
+        let expected_start =
+            "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.2\nU1234ABC\n";
+        let expected_end = "\n481068aa8b045a3e\n-----END SLACKRYPT MESSAGE-----";
+        assert_eq!(actual.starts_with(expected_start), true);
+        assert_eq!(actual.ends_with(expected_end), true);
+    }
+
+    #[test]
+    fn test_write_and_parse_message_to_file() {
+        let plaintext: String = "this is a plaintext message to encrypt".to_string();
+
+        let expected_begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
+        let expected_version_header: String = String::from("Version: Slackrypt 0.2");
+        let expected_end_header: String = String::from("-----END SLACKRYPT MESSAGE-----");
+
+        let user_id: String = String::from("U1234ABC");
+        let key: [u8; 16] = [
+            54, 98, 49, 57, 101, 53, 49, 53, 98, 99, 57, 52, 97, 51, 50, 57,
+        ];
+        let iv: [u8; 16] = [
+            52, 56, 49, 48, 54, 56, 97, 97, 56, 98, 48, 52, 53, 97, 51, 101,
+        ];
+        let expected_ciphertext_b64: String =
+            "ioKIb4vtVTqFT2A1NpQZXTApouFOzbv6QKmX6wZ/4QKd0kCyjqZD7jwq2a71ymlz".to_string();
+
+        let file_name: String = util::default_dir() + "/message.test";
+
+        let data = AsciiArmoredMessage::build(
+            plaintext.as_bytes(),
+            &read_public_key().unwrap(),
+            key,
+            user_id,
+            iv,
+        )
+        .unwrap()
+        .into_string();
+        std::fs::write(&file_name, data).expect("Unable to write encrypted message!");
+
+        //Read encrypted message from the file
+        let file_contents: String = io::load_contents_from_file(&file_name).unwrap();
+        let file_lines: Vec<&str> = file_contents.split('\n').collect();
+        let begin_header_line: &str = file_lines[0];
+        assert_eq!(&expected_begin_header, &begin_header_line);
+        let version_header_line: &str = file_lines[1];
+        assert_eq!(&expected_version_header, &version_header_line);
+        let user_id: &str = file_lines[2];
+        assert_eq!("U1234ABC", user_id);
+        let ciphertext_b64_line: &str = file_lines[3];
+        assert_eq!(expected_ciphertext_b64, ciphertext_b64_line);
+        let key_b64_line: &str = file_lines[4];
+        assert_eq!(key_b64_line.is_empty(), false);
+        let iv_line: &str = file_lines[5];
+        assert_eq!(&String::from_utf8_lossy(&iv), iv_line);
+        let end_header_line: &str = file_lines[6];
+        assert_eq!(expected_end_header, end_header_line);
+
+        std::fs::remove_file(&file_name).expect("message.test not found or permission denied");
     }
 
     fn read_public_key() -> Result<RSAPublicKey> {
