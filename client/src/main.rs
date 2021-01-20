@@ -15,7 +15,7 @@ mod util;
 
 fn main() {
     let dir: String = util::default_dir();
-    let version_header: String = String::from("Version: Slackrypt 0.2");
+    let version_header: String = String::from("Version: Slackrypt 0.3");
     init(&dir);
 
     let private_key = io::get_private_key(&dir).unwrap();

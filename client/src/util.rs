@@ -36,6 +36,18 @@ pub fn keys_exist(key_file: &str) -> bool {
     Path::new(key_file).exists()
 }
 
+pub fn hash_crc24(binary: &[u8]) -> String {
+    let hash: u32 = crc24::hash_raw(binary);
+    let bytes: [u8; 4] = hash.to_le_bytes();
+    let mut result: String = "=".to_string();
+    result.push_str(&to_base64_str(&bytes));
+    result
+}
+
+pub fn hash_crc24_matches(binary: &[u8], hash: &str) -> bool {
+    hash_crc24(binary).eq(hash)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -53,5 +65,13 @@ mod tests {
     fn test_to_base64_str() {
         let actual_result = to_base64_str(&vec![5, 4, 3, 2, 1, 0, 42, 255]);
         assert_eq!(actual_result, "BQQDAgEAKv8=");
+    }
+
+    #[test]
+    fn test_hash_crc24() {
+        let some_data: [u8; 8] = [0, 1, 2, 3, 252, 253, 254, 255];
+        let actual_result: String = hash_crc24(&some_data);
+        assert_eq!("=2gZGAA==", actual_result);
+        assert_eq!(hash_crc24_matches(&some_data, &actual_result), true);
     }
 }

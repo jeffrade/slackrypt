@@ -20,7 +20,7 @@ impl Error for AsciiArmoredError {}
 
 impl Display for AsciiArmoredError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Error trying to build AsciiArmoredMessage: {:?}", self)
+        write!(f, "Encountered an ascii armored error: {:?}", self)
     }
 }
 
@@ -34,6 +34,7 @@ pub struct AsciiArmoredMessage {
     ciphertext: String,
     encrypted_key: String,
     iv: String,
+    crc: String,
 }
 
 impl AsciiArmoredMessage {
@@ -45,13 +46,14 @@ impl AsciiArmoredMessage {
         iv: [u8; 16],
     ) -> Result<AsciiArmoredMessage, AsciiArmoredError> {
         let begin_header: &'static str = "-----BEGIN SLACKRYPT MESSAGE-----";
-        let version_header: &'static str = "Version: Slackrypt 0.2";
+        let version_header: &'static str = "Version: Slackrypt 0.3";
         let end_header: &'static str = "-----END SLACKRYPT MESSAGE-----";
 
         let ciphertext: Vec<u8> = encrypt_data_sym(&key, &iv, &plaintext);
         let ciphertext_b64: String = util::to_base64_str(&ciphertext);
         let encrypted_key: Vec<u8> = encrypt_data_asym(&key, public_key);
         let encrypted_key_b64: String = util::to_base64_str(&encrypted_key);
+        let crc: String = util::hash_crc24(&ciphertext);
 
         Ok(AsciiArmoredMessage {
             begin_header,
@@ -61,6 +63,7 @@ impl AsciiArmoredMessage {
             ciphertext: ciphertext_b64,
             encrypted_key: encrypted_key_b64,
             iv: String::from_utf8_lossy(&iv).to_string(),
+            crc,
         })
     }
 
@@ -78,8 +81,8 @@ impl AsciiArmoredMessage {
         data.push_str("\n");
         data.push_str(&self.iv);
         data.push_str("\n");
-        //TODO the radix-64 CRC (Cyclic_redundancy_check)? =njUN
-        //      -> CRC impl in C https://tools.ietf.org/html/rfc4880#section-6.1
+        data.push_str(&self.crc);
+        data.push_str("\n");
         data.push_str(self.end_header);
         data
     }
@@ -96,22 +99,29 @@ pub fn slackrypt(
     AsciiArmoredMessage::build(plaintext, public_key, key, user_id.to_string(), iv)
 }
 
-pub fn unslackrypt(armor: &str) -> String {
+pub fn unslackrypt(armor: &str) -> Result<String, AsciiArmoredError> {
     let private_key: RSAPrivateKey = io::get_private_key_default().unwrap();
     unslackrypt_with_key(armor, &private_key)
 }
 
-pub fn unslackrypt_with_key(armor: &str, private_key: &RSAPrivateKey) -> String {
+pub fn unslackrypt_with_key(
+    armor: &str,
+    private_key: &RSAPrivateKey,
+) -> Result<String, AsciiArmoredError> {
     let file_lines: Vec<&str> = armor.split('\n').collect();
     let ciphertext_b64_line: &str = file_lines[3];
     let ciphertext: Vec<u8> = util::from_base64_str(&ciphertext_b64_line);
+    let crc: &str = file_lines[6].trim();
+    if !util::hash_crc24_matches(&ciphertext, crc) {
+        return Err(AsciiArmoredError {});
+    }
     let key_b64_line: &str = file_lines[4];
     let key_b64_decoded_line: Vec<u8> = util::from_base64_str(&key_b64_line);
     let key: Vec<u8> = decrypt_data_asym(&key_b64_decoded_line, &private_key);
     let iv_line: &str = file_lines[5].trim();
     let iv = iv_line.as_bytes().to_vec();
     let byte_vec: Vec<u8> = decrypt_sym(&key, &iv, &ciphertext);
-    String::from_utf8_lossy(&byte_vec).to_string()
+    Ok(String::from_utf8_lossy(&byte_vec).to_string())
 }
 
 pub fn encrypt_data_asym(data: &[u8], public_key: &RSAPublicKey) -> Vec<u8> {
@@ -233,9 +243,9 @@ mod tests {
             .into_string();
         let file_lines: Vec<&str> = armor_msg.split('\n').collect();
         assert_eq!("-----BEGIN SLACKRYPT MESSAGE-----", file_lines[0]);
-        assert_eq!("Version: Slackrypt 0.2", file_lines[1]);
+        assert_eq!("Version: Slackrypt 0.3", file_lines[1]);
         assert_eq!("U1234ABC", file_lines[2]);
-        assert_eq!("-----END SLACKRYPT MESSAGE-----", file_lines[6]);
+        assert_eq!("-----END SLACKRYPT MESSAGE-----", file_lines[7]);
 
         let ciphertext_b64_line: &str = file_lines[3];
         let ciphertext: Vec<u8> = util::from_base64_str(&ciphertext_b64_line);
@@ -244,6 +254,10 @@ mod tests {
         let key: Vec<u8> = decrypt_data_asym(&encrypted_key, &private_key);
         let iv_line: &str = file_lines[5];
 
+        let actual_crc: &str = file_lines[6];
+        let expected_crc: String = util::hash_crc24(&ciphertext);
+        assert_eq!(&expected_crc, actual_crc);
+
         let actual_plaintext: Vec<u8> =
             decrypt_sym(&key, &iv_line.as_bytes().to_vec(), &ciphertext);
         assert_eq!(actual_plaintext.as_slice(), "Hello World!".as_bytes());
@@ -251,10 +265,10 @@ mod tests {
 
     #[test]
     pub fn test_unslackrypt() {
-        let armor_msg = "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.2\n\nqced0TL5q+J+jFw49HdLIw== \nN9QdbB+d5QYgCYCk4OB8aHBP0aMnWUEsngRAKbinUUNIDYBZ/32Xt6ViSlHPhE1wuC005IdigbESJ2bo4i/GRLlOW1Ime5Kihjwuni9u8RvhSqZWgbj45niZzqCWQrUsXNjwo8hpsiy+7erThhe23t7arRmEfCxdXXxwxnOLQAN9fKGW1d5oZApysO4jI1TU5xjTsj4WDU1Y6hfx18ceMTiOX5/iQzdxeLDj/icbYIpj6/1OUx8FaOA0QJrUsJ3S98O7udQJgdvv08W2P2xGSy2t75PTI+SXhw2KszYzq5M1OTlbMX8vmcBtucwpRP+oUGD/y6pGIXtASRjJ1XDeBw== \n481068aa8b045a3e \n-----END SLACKRYPT MESSAGE-----";
+        let armor_msg = "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.3\n\nqced0TL5q+J+jFw49HdLIw== \nN9QdbB+d5QYgCYCk4OB8aHBP0aMnWUEsngRAKbinUUNIDYBZ/32Xt6ViSlHPhE1wuC005IdigbESJ2bo4i/GRLlOW1Ime5Kihjwuni9u8RvhSqZWgbj45niZzqCWQrUsXNjwo8hpsiy+7erThhe23t7arRmEfCxdXXxwxnOLQAN9fKGW1d5oZApysO4jI1TU5xjTsj4WDU1Y6hfx18ceMTiOX5/iQzdxeLDj/icbYIpj6/1OUx8FaOA0QJrUsJ3S98O7udQJgdvv08W2P2xGSy2t75PTI+SXhw2KszYzq5M1OTlbMX8vmcBtucwpRP+oUGD/y6pGIXtASRjJ1XDeBw== \n481068aa8b045a3e \n=djKQAA== \n-----END SLACKRYPT MESSAGE-----";
         let private_key: RSAPrivateKey = read_private_key().unwrap();
         let plaintext = unslackrypt_with_key(armor_msg, &private_key);
-        assert_eq!("Hello World!".as_bytes(), plaintext.as_bytes());
+        assert_eq!("Hello World!".as_bytes(), plaintext.unwrap().as_bytes());
     }
 
     #[test]
@@ -342,7 +356,7 @@ mod tests {
             52, 56, 49, 48, 54, 56, 97, 97, 56, 98, 48, 52, 53, 97, 51, 101,
         ];
 
-        let actual = AsciiArmoredMessage::build(
+        let actual: String = AsciiArmoredMessage::build(
             plaintext.as_bytes(),
             &read_public_key().unwrap(),
             key,
@@ -353,8 +367,8 @@ mod tests {
         .into_string();
 
         let expected_start =
-            "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.2\nU1234ABC\n";
-        let expected_end = "\n481068aa8b045a3e\n-----END SLACKRYPT MESSAGE-----";
+            "-----BEGIN SLACKRYPT MESSAGE-----\nVersion: Slackrypt 0.3\nU1234ABC\n";
+        let expected_end = "\n481068aa8b045a3e\n=iw4OAA==\n-----END SLACKRYPT MESSAGE-----";
         assert_eq!(actual.starts_with(expected_start), true);
         assert_eq!(actual.ends_with(expected_end), true);
     }
@@ -364,7 +378,7 @@ mod tests {
         let plaintext: String = "this is a plaintext message to encrypt".to_string();
 
         let expected_begin_header: String = String::from("-----BEGIN SLACKRYPT MESSAGE-----");
-        let expected_version_header: String = String::from("Version: Slackrypt 0.2");
+        let expected_version_header: String = String::from("Version: Slackrypt 0.3");
         let expected_end_header: String = String::from("-----END SLACKRYPT MESSAGE-----");
 
         let user_id: String = String::from("U1234ABC");
@@ -376,6 +390,8 @@ mod tests {
         ];
         let expected_ciphertext_b64: String =
             "ioKIb4vtVTqFT2A1NpQZXTApouFOzbv6QKmX6wZ/4QKd0kCyjqZD7jwq2a71ymlz".to_string();
+
+        let expected_crc: &str = "=iw4OAA==";
 
         let file_name: String = util::default_dir() + "/message.test";
 
@@ -405,7 +421,9 @@ mod tests {
         assert_eq!(key_b64_line.is_empty(), false);
         let iv_line: &str = file_lines[5];
         assert_eq!(&String::from_utf8_lossy(&iv), iv_line);
-        let end_header_line: &str = file_lines[6];
+        let crc_line: &str = file_lines[6];
+        assert_eq!(expected_crc, crc_line);
+        let end_header_line: &str = file_lines[7];
         assert_eq!(expected_end_header, end_header_line);
 
         std::fs::remove_file(&file_name).expect("message.test not found or permission denied");

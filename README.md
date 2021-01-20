@@ -41,4 +41,3 @@ $ export RUST_LOG=WARN
 ## Backlog
  - Add Mac OSX buld instructions.
  - Implement "New Public Key" in GUI menu.
- - radix-64 CRC (Cyclic_redundancy_check), in C https://tools.ietf.org/html/rfc4880#section-6.1

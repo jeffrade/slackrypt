@@ -1,5 +1,5 @@
 use fltk::{app::*, button::*, input::*, menu::*, text::*, tree::*, window::Window};
-use log::{debug, error};
+use log::debug;
 use rsa::RSAPublicKey;
 use std::collections::HashMap;
 
@@ -195,15 +195,15 @@ fn encrypt_text(plaintext: &str, pub_key: &str, user_id: &str) -> String {
 
     match crypto::slackrypt(plaintext.as_bytes(), &public_key, user_id) {
         Ok(ascii_message) => ascii_message.into_string(),
-        Err(e) => {
-            error!("Error trying to build AsciiArmoredMessage: {}", e);
-            "Error trying to build AsciiArmoredMessage".to_string()
-        }
+        Err(e) => format!("Error trying to build and encrypt message: {}", e),
     }
 }
 
 fn decrypt_text(armored_msg: &str) -> String {
-    crypto::unslackrypt(armored_msg)
+    match crypto::unslackrypt(armored_msg) {
+        Ok(msg) => msg,
+        Err(e) => format!("Error trying to parse and decrypt message: {}", e),
+    }
 }
 
 fn get_user_pubkeys() {
