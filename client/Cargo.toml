@@ -12,6 +12,7 @@ edition = "2018"
 aes-soft = "0.3.3"
 base64 = "0.12.3"
 block-modes = "0.3.3"
+crc24 = "0.1.6"
 fltk = "^0.6"
 log = { version = "0.4", features = ["std", "serde"] }
 pem = "0.7"
