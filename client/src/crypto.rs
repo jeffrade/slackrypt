@@ -6,7 +6,6 @@ use std::vec::Vec;
 use aes_soft::Aes128;
 use block_modes::block_padding::Pkcs7;
 use block_modes::{BlockMode, Cbc};
-use log::{debug, info};
 use rand::rngs::OsRng;
 use rsa::{PaddingScheme, PublicKey, RSAPrivateKey, RSAPublicKey};
 
@@ -157,7 +156,7 @@ pub fn generate_random_hex_16() -> [u8; 16] {
         .arg("16")
         .output()
         .expect("Failed to generate random hex!");
-    debug!("openssl rand status {}", cmd.status);
+    log::debug!("openssl rand status {}", cmd.status);
 
     let result: &[u8] = cmd.stdout.as_slice();
     let mut ret_val = [0; 16];
@@ -180,12 +179,12 @@ pub fn openssl_pub_key_out(file_name: &str) {
         .arg(&pub_key_file)
         .output()
         .expect("Failed to generate keys!");
-    debug!("openssl rsa status {}", cmd.status);
-    debug!(
+    log::debug!("openssl rsa status {}", cmd.status);
+    log::debug!(
         "openssl rsa stdout {}",
         String::from_utf8_lossy(&cmd.stdout)
     );
-    debug!(
+    log::debug!(
         "openssl rsa stderr: {}",
         String::from_utf8_lossy(&cmd.stderr)
     );
@@ -202,11 +201,11 @@ pub fn openssl_generate(file_name: &str, bits: i32) {
         .arg(format!("{}", bits))
         .output()
         .expect("Failed to generate keys!");
-    debug!("openssl genrsa returned {}", cmd.status);
+    log::debug!("openssl genrsa returned {}", cmd.status);
 }
 
 pub fn create_keys_asym(bits: i32, key_file: &str) {
-    info!("Creating {} bit keys, this may take a while...", bits);
+    log::info!("Creating {} bit keys, this may take a while...", bits);
 
     // Using openssl since RustCrypto/RSA cannot export keys in PEM.
     // See issue https://github.com/RustCrypto/RSA/issues/31
@@ -221,7 +220,7 @@ fn chmod_file(file_name: &str, permissions: &str) {
         .arg(file_name)
         .output()
         .expect("Failed to chmod file!");
-    debug!("chmod cmd returned {}", cmd.status);
+    log::debug!("chmod cmd returned {}", cmd.status);
 }
 
 #[cfg(test)]

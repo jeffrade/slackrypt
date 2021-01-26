@@ -3,7 +3,6 @@ use std::sync::mpsc;
 use std::thread;
 
 use futures::executor::block_on;
-use log::warn;
 use simple_logger::SimpleLogger;
 
 mod db;
@@ -12,7 +11,7 @@ mod slack;
 mod util;
 
 fn main() {
-    SimpleLogger::from_env();
+    SimpleLogger::from_env().init().unwrap();
     init();
     db::init().unwrap();
 
@@ -33,7 +32,7 @@ fn init() {
     match fs::create_dir(&dir) {
         Ok(_) => true,
         Err(_) => {
-            warn!("Ignore since {} dir might already exist.", dir);
+            log::warn!("Ignore since {} dir might already exist.", dir);
             true
         }
     };

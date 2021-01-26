@@ -1,5 +1,4 @@
 use fltk::{app::*, button::*, input::*, menu::*, text::*, tree::*, window::Window};
-use log::debug;
 use rsa::RSAPublicKey;
 use std::collections::HashMap;
 
@@ -18,7 +17,7 @@ pub enum Message {
 // https://github.com/MoAlyousef/fltk-rs/blob/master/src/prelude.rs#L63
 pub fn init(window_label: &str) {
     let users: HashMap<String, (String, String)> = io::read_users_file();
-    debug!("Loaded users: {:?}", &users);
+    log::debug!("Loaded users: {:?}", &users);
 
     let window_width = 800;
     let window_height = 600;
@@ -81,11 +80,11 @@ pub fn init(window_label: &str) {
         let user_name: String = match users_tree.get_selected_items() {
             Some(tree_users) => {
                 let user_name: String = tree_users.as_slice()[0].label().unwrap();
-                debug!("user {} was selected", &user_name);
+                log::debug!("user {} was selected", &user_name);
                 user_name
             }
             None => {
-                debug!("No user was selected");
+                log::debug!("No user was selected");
                 "".to_string()
             }
         };

@@ -5,7 +5,6 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::io::{Result, Write};
 
-use log::warn;
 use rsa::{RSAPrivateKey, RSAPublicKey};
 
 use crate::util;
@@ -84,7 +83,7 @@ pub fn read_users_file() -> HashMap<String, (String, String)> {
             }
         }
         Err(_e) => {
-            warn!("slackrypt.users file does not yet exist.");
+            log::warn!("slackrypt.users file does not yet exist.");
         }
     }
     user_pubkey_map

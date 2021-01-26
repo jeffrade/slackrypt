@@ -4,8 +4,6 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::io::Error;
 
-use log::warn;
-
 use crate::util;
 
 const PROP_FILE_NAME: &str = "/slackrypt.properties";
@@ -25,7 +23,7 @@ pub fn get_properties() -> Result<HashMap<String, String>, Error> {
             }
         }
         Err(_e) => {
-            warn!("slackrypt.properties file does not exist.");
+            log::warn!("slackrypt.properties file does not exist.");
         }
     }
 

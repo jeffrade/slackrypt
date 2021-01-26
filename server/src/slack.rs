@@ -1,4 +1,3 @@
-use log::{debug, error, info};
 use slack::api::rtm::StartResponse;
 use slack::api::{Channel, Message, MessageStandard, User};
 use slack::{Error, Event, RtmClient};
@@ -40,13 +39,13 @@ impl slack::EventHandler for SlackHandler {
         let mut event_text: String = String::new();
         let mut sender: String = String::new();
         let mut channel_id: String = String::new();
-        info!(
+        log::info!(
             "\n\n################################# Event\n{:?}\n\n",
             event
         );
         match event {
             Event::Hello => {
-                info!("################################# Event::Hello");
+                log::info!("################################# Event::Hello");
             }
             Event::Message(message) => match *message {
                 Message::Standard(MessageStandard {
@@ -59,13 +58,13 @@ impl slack::EventHandler for SlackHandler {
                     sender.push_str(user.as_ref().unwrap());
                     channel_id.push_str(channel.as_ref().unwrap());
                 }
-                _ => debug!("Message not decoded, ignore it."),
+                _ => log::debug!("Message not decoded, ignore it."),
             },
             Event::Goodbye => {
-                info!("################################# Event::Goodbye");
+                log::info!("################################# Event::Goodbye");
                 start(self)
             }
-            _ => debug!("Event not decoded, ignore it."),
+            _ => log::debug!("Event not decoded, ignore it."),
         }
 
         // listen for commands
@@ -91,7 +90,7 @@ impl slack::EventHandler for SlackHandler {
 
         if self.should_reply(&event_text) {
             let args: Vec<&str> = event_text.split(' ').collect();
-            debug!("args are {:?}", args);
+            log::debug!("args are {:?}", args);
             if args.len() > 1 {
                 //add DM commands here that need action
                 if args[1] == "help" {
@@ -108,11 +107,11 @@ impl slack::EventHandler for SlackHandler {
     }
 
     fn on_close(&mut self, _cli: &RtmClient) {
-        info!("on_close");
+        log::info!("on_close");
     }
 
     fn on_connect(&mut self, cli: &RtmClient) {
-        info!("on_connect");
+        log::info!("on_connect");
         let channel_name: String = util::get_env_var("SLACK_CHANNEL_NAME", "general");
         let resp: &StartResponse = cli.start_response();
         let users: &Vec<User> = resp.users.as_ref().expect("Could not get users");
@@ -169,7 +168,7 @@ impl slack::EventHandler for SlackHandler {
 }
 
 pub async fn init(server_base_url: &str) {
-    info!("Initializing Slack RTM client...");
+    log::info!("Initializing Slack RTM client...");
     let api_key: String = util::get_env_var("BOTUSER_AUTH_ACCESS_TOKEN", "");
     let botuser_name: String = util::get_env_var("BOTUSER_REAL_NAME", "Slackrypt");
     let hash_map = HashMap::new();
@@ -186,13 +185,13 @@ pub async fn init(server_base_url: &str) {
 }
 
 fn start(slack_handler: &mut SlackHandler) {
-    info!("Starting Slack RTM client...");
+    log::info!("Starting Slack RTM client...");
     let resp: Result<(), Error> =
         RtmClient::login_and_run(&slack_handler.api_key.to_string(), slack_handler);
     match resp {
         Ok(_) => {}
         Err(err) => {
-            error!("Error when attempting to login and run!");
+            log::error!("Error when attempting to login and run!");
             panic!("Err: Could not login and start slack client! {}", err)
         }
     }

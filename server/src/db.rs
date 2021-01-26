@@ -1,4 +1,3 @@
-use log::{debug, info, warn};
 use rusqlite::{params, Connection, Result, NO_PARAMS};
 use std::vec::Vec;
 
@@ -15,7 +14,7 @@ struct User {
 fn get_connection() -> Result<Connection> {
     let path: String = util::default_dir() + "/slackrypt.db3";
     let conn = Connection::open(&path)?;
-    debug!("is autocommit? {}", conn.is_autocommit());
+    log::debug!("is autocommit? {}", conn.is_autocommit());
     Ok(conn)
 }
 
@@ -91,7 +90,7 @@ pub fn get_users_all() -> Result<Vec<String>> {
 }
 
 pub fn init() -> Result<()> {
-    info!("Starting SQLite3...");
+    log::info!("Starting SQLite3...");
     let conn: Connection = get_connection().unwrap();
 
     match conn.execute(
@@ -105,16 +104,16 @@ pub fn init() -> Result<()> {
     ) {
         Ok(_) => true,
         Err(_) => {
-            warn!("Ignore since user table might already exist.");
+            log::warn!("Ignore since user table might already exist.");
             true
         }
     };
 
     let users: Vec<String> = get_users_all().unwrap();
 
-    debug!("Current users:");
+    log::debug!("Current users:");
     for user in users {
-        debug!("{:?}", user);
+        log::debug!("{:?}", user);
     }
     Ok(())
 }

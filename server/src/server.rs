@@ -2,7 +2,6 @@ use std::sync::mpsc;
 
 use actix_rt::System;
 use actix_web::{dev::Server, middleware, web, App, HttpResponse, HttpServer};
-use log::{debug, info};
 use serde::{Deserialize, Serialize};
 
 use crate::db;
@@ -16,7 +15,7 @@ struct User {
 
 // Inspiration from https://github.com/actix/examples/blob/e8ab9ee7cab3a17aedbddb4800d56d206d0a296f/run-in-thread/src/main.rs
 pub fn start_server(host_and_port: String, tx: mpsc::Sender<Server>) -> std::io::Result<()> {
-    info!("Starting HTTP service...");
+    log::info!("Starting HTTP service...");
     let mut sys = System::new("slackrypt-server");
 
     let srv = HttpServer::new(|| {
@@ -37,14 +36,14 @@ pub fn start_server(host_and_port: String, tx: mpsc::Sender<Server>) -> std::io:
 
 // curl -H "Content-Type: application/json" http://127.0.0.1:8080/pubkey/users
 async fn pubkey_users() -> HttpResponse {
-    debug!("pubkey_users() entering...");
+    log::debug!("pubkey_users() entering...");
     let users: Vec<String> = db::get_users_all().unwrap();
     HttpResponse::Ok().json(users)
 }
 
 // curl -H "Content-Type: text/plain" http://127.0.0.1:8080/init.sh
 async fn init_user() -> HttpResponse {
-    debug!("init_user() entering...");
+    log::debug!("init_user() entering...");
     let server_base_url: String = util::get_env_var("SLACKRYPT_BASE_URL", "127.0.0.1:8080");
     let response: String = util::get_init_sh_cmd(format!("https://{}", &server_base_url).as_str());
     HttpResponse::Ok()

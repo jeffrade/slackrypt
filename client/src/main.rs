@@ -3,7 +3,6 @@ use std::convert::Into;
 use std::fs;
 use std::vec::Vec;
 
-use log::{info, warn};
 use rsa::RSAPublicKey;
 use simple_logger::SimpleLogger;
 
@@ -47,23 +46,23 @@ fn main() {
     let decrypted_ciphertext: Vec<u8> = crypto::decrypt_sym(&de_key_vec, &iv.to_vec(), &ciphertext);
     assert_eq!(decrypted_ciphertext.as_slice(), plaintext.as_slice());
 
-    info!("Starting client...");
+    log::info!("Starting client...");
     gui::init(&version_header); //this must be called last
 }
 
 fn init(dir: &str) {
-    SimpleLogger::from_env(); // to set, export RUST_LOG=ERROR|WARN|INFO|DEBUG
+    SimpleLogger::from_env().init().unwrap();
 
     match fs::create_dir(dir) {
         Ok(_) => true,
         Err(_) => {
-            warn!("Ignore since {} dir might already exist.", dir);
+            log::warn!("Ignore since {} dir might already exist.", dir);
             true
         }
     };
 
     let props = prop::get_properties();
-    info!("Loaded properties: {:?}", &props.unwrap());
+    log::info!("Loaded properties: {:?}", &props.unwrap());
 
     let key_file = String::from(dir) + "/key.pem";
     if !util::keys_exist(&key_file) {
