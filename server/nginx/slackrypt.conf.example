@@ -24,7 +24,7 @@ server {
     server_name example.com;
 
     location /slackrypt/ {
-        proxy_pass http://localhost:8080/;
+        proxy_pass http://localhost:8000/;
     }
 
     listen [::]:443 ssl ipv6only=on; # managed by Certbot

@@ -1,8 +1,13 @@
+#![feature(decl_macro)]
+
+#[macro_use]
+extern crate rocket;
+#[macro_use]
+extern crate rocket_contrib;
+
 use std::fs;
-use std::sync::mpsc;
 use std::thread;
 
-use futures::executor::block_on;
 use simple_logger::SimpleLogger;
 
 mod db;
@@ -13,18 +18,7 @@ mod util;
 fn main() {
     SimpleLogger::from_env().init().unwrap();
     init();
-    db::init().unwrap();
-
-    let (tx, rx) = mpsc::channel();
-    let server_base_url: String = util::get_env_var("SLACKRYPT_BASE_URL", "127.0.0.1:8080");
-    let host_and_port: String = util::get_env_var("SLACKRYPT_HOST_AND_PORT", "127.0.0.1:8080");
-    thread::spawn(move || {
-        let _ = server::start_server(host_and_port, tx);
-    });
-    let _srv = rx.recv().unwrap();
-
-    let _result = slack::init(&server_base_url);
-    block_on(_result); // https://rust-lang.github.io/async-book/01_getting_started/04_async_await_primer.html
+    start_services();
 }
 
 fn init() {
@@ -36,4 +30,17 @@ fn init() {
             true
         }
     };
+}
+
+fn start_services() {
+    db::init().expect("Could not initialize and start the database!");
+    start_slack_bot();
+    server::start_server();
+}
+
+fn start_slack_bot() {
+    let server_base_url: String = util::get_env_var("SLACKRYPT_BASE_URL", "127.0.0.1:8000");
+    thread::spawn(move || {
+        slack::init(&server_base_url);
+    });
 }
