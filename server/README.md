@@ -36,7 +36,21 @@ $ cargo run
 ```
 The user database will be located at `~/.slackrypt-server/slackrypt.db3`
 
-## Deploy
+## Deploy (an example script without docker)
 ```
 $ bash deploy.sh
+```
+
+## Docker (build and run)
+```
+$ docker build -t slackrypt-server -f Dockerfile .
+$ export SLACK_CHANNEL_NAME=general
+$ export BOTUSER_AUTH_ACCESS_TOKEN=xoxb-foobar-1234567890
+$ export SLACKRYPT_BASE_URL=example.com
+$ docker run \
+   -p 8000:8000 \
+   --env SLACK_CHANNEL_NAME \
+   --env BOTUSER_AUTH_ACCESS_TOKEN \
+   --env SLACKRYPT_BASE_URL \
+  slackrypt-server
 ```

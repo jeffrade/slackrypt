@@ -1,0 +1,4 @@
+target
+Dockerfile
+slackrypt-server.log
+deploy.sh
