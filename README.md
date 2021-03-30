@@ -41,3 +41,4 @@ $ export RUST_LOG=WARN
 ## Backlog
  - Add Mac OSX buld instructions.
  - Implement "New Public Key" in GUI menu.
+foobar
