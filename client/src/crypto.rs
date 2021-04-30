@@ -392,7 +392,9 @@ mod tests {
 
         let expected_crc: &str = "=iw4OAA==";
 
-        let file_name: String = util::default_dir() + "/message.test";
+        let default_dir = util::default_dir();
+        util::create_dir(&default_dir);
+        let file_name: String = default_dir + "/message.test";
 
         let data = AsciiArmoredMessage::build(
             plaintext.as_bytes(),

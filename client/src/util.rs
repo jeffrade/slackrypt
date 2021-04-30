@@ -1,9 +1,14 @@
 use std::env;
+use std::fs;
 use std::path::Path;
 use std::vec::Vec;
 
 pub fn default_dir() -> String {
     String::from(env!("HOME")) + "/.slackrypt"
+}
+
+pub fn create_dir(dir: &str) {
+    let _ = fs::create_dir(dir); // Don't panic, if it cannot create, it either exists or permissions issue.
 }
 
 pub fn get_env_var(var: &str, default: &str) -> String {

@@ -1,6 +1,5 @@
 use std::convert::From;
 use std::convert::Into;
-use std::fs;
 use std::vec::Vec;
 
 use rsa::RSAPublicKey;
@@ -52,15 +51,7 @@ fn main() {
 
 fn init(dir: &str) {
     SimpleLogger::from_env().init().unwrap();
-
-    match fs::create_dir(dir) {
-        Ok(_) => true,
-        Err(_) => {
-            log::warn!("Ignore since {} dir might already exist.", dir);
-            true
-        }
-    };
-
+    util::create_dir(&dir);
     let props = prop::get_properties();
     log::info!("Loaded properties: {:?}", &props.unwrap());
 
