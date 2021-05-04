@@ -1,4 +1,4 @@
-use rusqlite::{params, Connection, Result, NO_PARAMS};
+use rusqlite::{params, Connection, Result};
 use std::vec::Vec;
 
 use crate::util;
@@ -60,8 +60,8 @@ fn has_pubkey(user_id: &str) -> bool {
 
 pub fn select_pubkey(user_id: &str) -> Result<Vec<String>> {
     let conn: Connection = get_connection().unwrap();
-    let mut stmt = conn.prepare("SELECT pubkey FROM users WHERE user_id = :user_id")?;
-    let mut rows = stmt.query_named(&[(":user_id", &user_id)])?;
+    let mut stmt = conn.prepare("SELECT pubkey FROM users WHERE user_id = ?")?;
+    let mut rows = stmt.query([&user_id])?;
 
     let mut pubkeys = Vec::new();
     while let Some(row) = rows.next()? {
@@ -75,7 +75,7 @@ pub fn select_pubkey(user_id: &str) -> Result<Vec<String>> {
 pub fn get_users_all() -> Result<Vec<String>> {
     let conn: Connection = get_connection().unwrap();
     let mut stmt = conn.prepare("SELECT user_id, name, pubkey FROM users ORDER BY name")?;
-    let mut rows = stmt.query(NO_PARAMS)?;
+    let mut rows = stmt.query([])?;
 
     let mut users = Vec::new();
     while let Some(row) = rows.next()? {
