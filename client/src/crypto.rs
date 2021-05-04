@@ -12,6 +12,11 @@ use rsa::{PaddingScheme, PublicKey, RSAPrivateKey, RSAPublicKey};
 use crate::io;
 use crate::util;
 
+const BEGIN_HEADER: & str = "-----BEGIN SLACKRYPT MESSAGE-----";
+const VERSION_HEADER: & str = "Version: Slackrypt 0.3";
+const END_HEADER: & str = "-----END SLACKRYPT MESSAGE-----";
+const LINE_BREAK: &str = "\n";
+
 #[derive(Debug)]
 pub struct AsciiArmoredError {}
 
@@ -44,10 +49,6 @@ impl AsciiArmoredMessage {
         user_id: String,
         iv: [u8; 16],
     ) -> Result<AsciiArmoredMessage, AsciiArmoredError> {
-        let begin_header: &'static str = "-----BEGIN SLACKRYPT MESSAGE-----";
-        let version_header: &'static str = "Version: Slackrypt 0.3";
-        let end_header: &'static str = "-----END SLACKRYPT MESSAGE-----";
-
         let ciphertext: Vec<u8> = encrypt_data_sym(&key, &iv, &plaintext);
         let ciphertext_b64: String = util::to_base64_str(&ciphertext);
         let encrypted_key: Vec<u8> = encrypt_data_asym(&key, public_key);
@@ -55,9 +56,9 @@ impl AsciiArmoredMessage {
         let crc: String = util::hash_crc24(&ciphertext);
 
         Ok(AsciiArmoredMessage {
-            begin_header,
-            end_header,
-            version_header,
+            begin_header: BEGIN_HEADER,
+            end_header: END_HEADER,
+            version_header: VERSION_HEADER,
             user_id,
             ciphertext: ciphertext_b64,
             encrypted_key: encrypted_key_b64,
@@ -69,19 +70,19 @@ impl AsciiArmoredMessage {
     pub fn into_string(self: AsciiArmoredMessage) -> String {
         let mut data: String = String::new();
         data.push_str(self.begin_header);
-        data.push_str("\n");
+        data.push_str(LINE_BREAK);
         data.push_str(self.version_header);
-        data.push_str("\n");
+        data.push_str(LINE_BREAK);
         data.push_str(&self.user_id);
-        data.push_str("\n");
+        data.push_str(LINE_BREAK);
         data.push_str(&self.ciphertext);
-        data.push_str("\n");
+        data.push_str(LINE_BREAK);
         data.push_str(&self.encrypted_key);
-        data.push_str("\n");
+        data.push_str(LINE_BREAK);
         data.push_str(&self.iv);
-        data.push_str("\n");
+        data.push_str(LINE_BREAK);
         data.push_str(&self.crc);
-        data.push_str("\n");
+        data.push_str(LINE_BREAK);
         data.push_str(self.end_header);
         data
     }
@@ -126,7 +127,7 @@ pub fn unslackrypt_with_key(
 pub fn encrypt_data_asym(data: &[u8], public_key: &RSAPublicKey) -> Vec<u8> {
     let mut rng = OsRng;
     public_key
-        .encrypt(&mut rng, PaddingScheme::PKCS1v15, &data[..])
+        .encrypt(&mut rng, PaddingScheme::PKCS1v15, data)
         .expect("failed to encrypt")
 }
 
