@@ -12,9 +12,9 @@ use rsa::{PaddingScheme, PublicKey, RSAPrivateKey, RSAPublicKey};
 use crate::io;
 use crate::util;
 
-const BEGIN_HEADER: & str = "-----BEGIN SLACKRYPT MESSAGE-----";
-const VERSION_HEADER: & str = "Version: Slackrypt 0.3";
-const END_HEADER: & str = "-----END SLACKRYPT MESSAGE-----";
+const BEGIN_HEADER: &str = "-----BEGIN SLACKRYPT MESSAGE-----";
+const VERSION_HEADER: &str = "Version: Slackrypt 0.3";
+const END_HEADER: &str = "-----END SLACKRYPT MESSAGE-----";
 const LINE_BREAK: &str = "\n";
 
 #[derive(Debug)]
