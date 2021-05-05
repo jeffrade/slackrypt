@@ -1,3 +1,4 @@
+use log::{debug, error, info};
 use slack::api::rtm::StartResponse;
 use slack::api::{Channel, Message, MessageStandard, User};
 use slack::{Event, RtmClient};
@@ -38,13 +39,13 @@ impl slack::EventHandler for SlackHandler {
         let mut event_text: String = String::new();
         let mut sender: String = String::new();
         let mut channel_id: String = String::new();
-        log::info!(
+        debug!(
             "\n\n################################# Event\n{:?}\n\n",
             event
         );
         match event {
             Event::Hello => {
-                log::info!("################################# Event::Hello");
+                info!("################################# Event::Hello");
             }
             Event::Message(message) => match *message {
                 Message::Standard(MessageStandard {
@@ -57,13 +58,25 @@ impl slack::EventHandler for SlackHandler {
                     sender.push_str(user.as_ref().unwrap());
                     channel_id.push_str(channel.as_ref().unwrap());
                 }
-                _ => log::debug!("Message not decoded, ignore it."),
+                _ => debug!("Message not decoded, ignore it."),
             },
+            Event::DesktopNotification {
+                ref content,
+                ref subtitle,
+                ref channel,
+                ..
+            } => {
+                event_text.push_str(content.as_ref().unwrap());
+                sender.push_str(subtitle.as_ref().unwrap());
+                channel_id.push_str(channel.as_ref().unwrap());
+                debug!("################################# Event::DesktopNotification");
+                return;
+            }
             Event::Goodbye => {
-                log::info!("################################# Event::Goodbye");
+                info!("################################# Event::Goodbye");
                 start(self)
             }
-            _ => log::debug!("Event not decoded, ignore it."),
+            _ => debug!("Event not decoded, ignore it."),
         }
 
         // listen for commands
@@ -77,9 +90,15 @@ impl slack::EventHandler for SlackHandler {
         }
 
         if self.is_public_key(&event_text.trim(), &channel_id) {
-            let user_name: String = self.users_cache.get(&sender).unwrap().to_string(); //FIXME Error when new user
-                                                                                        // thread 'main' panicked at 'called `Option::unwrap()` on a `None` value', src/slack.rs:70:37
-                                                                                        // Just check in the cache first, then manually add (i.e. when new user joins Slack workspace after launch)
+            let user_name: String = match self.users_cache.get(&sender) {
+                Some(name) => name.clone(),
+                None => "FIXME".to_string(),
+            };
+            // FIXME Error when new user is added to the Slack org after this Slackbot connects (i.e. initial load of users).
+            // thread 'main' panicked at 'called `Option::unwrap()` on a `None` value'.
+            // Just check in the cache first, then manually add (i.e. when new user joins Slack workspace after launch).
+            // Problem is Event::Message doesn't have the correct user name and Event::DesktopNotification doesn't have the user id.
+            // This might have to be a PR to upstream slack crate.
 
             let _ = db::upsert_pubkey(&sender, &user_name, event_text.trim()).unwrap();
             let response: String =
@@ -89,7 +108,7 @@ impl slack::EventHandler for SlackHandler {
 
         if self.should_reply(&event_text) {
             let args: Vec<&str> = event_text.split(' ').collect();
-            log::debug!("args are {:?}", args);
+            debug!("args are {:?}", args);
             if args.len() > 1 {
                 //add DM commands here that need action
                 if args[1] == "help" {
@@ -106,11 +125,11 @@ impl slack::EventHandler for SlackHandler {
     }
 
     fn on_close(&mut self, _cli: &RtmClient) {
-        log::info!("on_close");
+        info!("on_close");
     }
 
     fn on_connect(&mut self, cli: &RtmClient) {
-        log::info!("on_connect");
+        info!("on_connect");
         let channel_name: String = util::get_env_var("SLACK_CHANNEL_NAME", "general");
         let resp: &StartResponse = cli.start_response();
         let users: &Vec<User> = resp.users.as_ref().expect("Could not get users");
@@ -127,7 +146,7 @@ impl slack::EventHandler for SlackHandler {
         let channel_id: String = channel.id.as_ref().unwrap().to_string();
 
         // find all human users to persist initial info
-        let mut user_info: Vec<(&str, &str, &str)> = Vec::new();
+        let mut user_info: Vec<(&str, &str, &str)> = Vec::new(); //FIXME Make a struct in db.rs
         for u in users {
             if !u.is_bot.unwrap() && !u.deleted.unwrap() {
                 user_info.push((u.id.as_ref().unwrap(), u.name.as_ref().unwrap(), ""));
@@ -151,13 +170,12 @@ impl slack::EventHandler for SlackHandler {
                 }
             })
             .unwrap();
-        assert_eq!(true, this_bot_user.is_bot.unwrap());
-        assert_eq!(false, this_bot_user.deleted.unwrap());
-        let this_bot_user_id: String = this_bot_user.id.as_ref().unwrap().to_string();
-        self.user_id = String::from(&this_bot_user_id);
+        assert!(this_bot_user.is_bot.unwrap());
+        assert!(!this_bot_user.deleted.unwrap());
+        self.user_id = this_bot_user.id.as_ref().unwrap().to_string();
 
         // set the String pattern to look for when responding to @Slackrypt <command>
-        self.reply_pattern = "<@".to_string() + &this_bot_user_id + "> ";
+        self.reply_pattern = "<@".to_string() + &self.user_id + "> ";
 
         // Send connected message to channel
         let connection_msg: String =
@@ -167,7 +185,7 @@ impl slack::EventHandler for SlackHandler {
 }
 
 pub fn init(server_base_url: &str) {
-    log::info!("Initializing Slack RTM client...");
+    info!("Initializing Slack RTM client...");
     let api_key: String = util::get_env_var("BOTUSER_AUTH_ACCESS_TOKEN", "");
     let botuser_name: String = util::get_env_var("BOTUSER_REAL_NAME", "Slackrypt");
     let hash_map = HashMap::new();
@@ -184,13 +202,13 @@ pub fn init(server_base_url: &str) {
 }
 
 fn start(slack_handler: &mut SlackHandler) {
-    log::info!("Starting Slack RTM client...");
+    info!("Starting Slack RTM client...");
     match RtmClient::login_and_run(&slack_handler.api_key.to_string(), slack_handler) {
         Ok(()) => {
-            log::info!("RTM client login_and_run successfully closed!");
+            info!("RTM client login_and_run successfully closed!");
         }
         Err(err) => {
-            log::error!("Error when attempting to login and run!");
+            error!("Error when attempting to login and run!");
             panic!("Err: Could not login and start slack client! {}", err)
         }
     }
