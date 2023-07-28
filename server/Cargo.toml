@@ -1,21 +1,21 @@
 [package]
 name = "slackrypt-server"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Jeff Rade <jeffrade@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bytes = "^1.0"
+bytes = "^1.4"
 futures = "^0.3"
 json = "^0.12"
 log = { version = "^0.4", features = ["std", "serde"] }
 rand = "^0.8"
 rocket = "^0.4"
 rocket_contrib = "^0.4"
-rusqlite = "^0.25"
-serde = { version = "^1", features = ["derive"] }
-serde_json = "^1"
-simple_logger = "^1"
+rusqlite = "^0.29"
+serde = { version = "^1.0", features = ["derive"] }
+serde_json = "^1.0"
+simple_logger = "^4.2"
 slack = "^0.25"
